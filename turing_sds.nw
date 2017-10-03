@@ -171,23 +171,38 @@ Diffusion phase. Each agent selects an agent at random, if they get an active ag
 
 But does that have testing and diffusion? The test can be to pick a rule from the truth table and see if it matches?
 
+\subsection{Data structures}
+<<data structures>>=
+Truth = namedtuple('Truth',('state_num','action','xeq0','xgt0'))
+State = namedtuple('State',('state','x','y'))
+Hypothesis = namedtuple('Hypothesis',('previous','current'))
+@
+
 \subsection{Truth table in python}
 <<addition truth table>>=
-Truth = namedtuple('Truth',('state_num','action','xeq0','xgt0'))
-
 inc_x = lambda px,py,x,y: x == px+1 and y == py
 inc_y = lambda px,py,x,y: x == px and y == py+1
 dec_x = lambda px,py,x,y: x == px-1 and y == py
 dec_y = lambda px,py,x,y: x == px and y == py-1
-init = lambda px,py,x,y: px is None and py is None and x == 2 and y == 3
+init = lambda px,py,x,y: px is None and py is None
 halt = lambda px,py,x,y: x == px and y == py
 
+# Truth table for '2x + y'
 truth_table = {
-	1:Truth(state_num=1, action=init,  xeq0=4, xgt0=2),
+	1:Truth(state_num=1, action=init,  xeq0=5, xgt0=2),
 	2:Truth(state_num=2, action=dec_x, xeq0=3, xgt0=3),
-	3:Truth(state_num=3, action=inc_y, xeq0=4, xgt0=2),
-	4:Truth(state_num=4, action=halt,  xeq0=4, xgt0=4),
+	3:Truth(state_num=3, action=inc_y, xeq0=4, xgt0=4),
+	4:Truth(state_num=4, action=inc_y, xeq0=5, xgt0=2),
+	5:Truth(state_num=5, action=halt,  xeq0=5, xgt0=5),
 }
+
+# Truth table for 'Add x + y'
+#truth_table = {
+#	1:Truth(state_num=1, action=init,  xeq0=4, xgt0=2),
+#	2:Truth(state_num=2, action=dec_x, xeq0=3, xgt0=3),
+#	3:Truth(state_num=3, action=inc_y, xeq0=4, xgt0=2),
+#	4:Truth(state_num=4, action=halt,  xeq0=4, xgt0=4),
+#}
 @
 
 <<imports>>=
@@ -196,7 +211,7 @@ from collections import namedtuple
 
 \subsection{Random hypothesis function}
 <<random hypothesis function>>=
-def random_hypothesis_function(random, swarm):
+def random_hypothesis_function(random, swarm, initial_state):
 
 	polled_agent = random.choice(swarm)
 
@@ -214,31 +229,23 @@ def random_hypothesis_function(random, swarm):
 			)
 		)
 
-		new_x,new_y = peturbation(old_hyp['x'],old_hyp['y'])
+		new_x,new_y = peturbation(old_hyp.current.x,old_hyp.current.y)
 
-		old_state = truth_table[old_hyp['state']]
+		old_state = truth_table[old_hyp.current.state]
 
 		new_state = random.choice( (old_state.xeq0, old_state.xgt0,) )
 
-		new_hyp = {
-			'state':new_state,
-			'x':new_x,
-			'y':new_y,
-			'prev state':old_hyp['state'],
-			'prev x':old_hyp['x'],
-			'prev y':old_hyp['y'],
-		}
+		new_hyp = Hypothesis(
+			current=State(state=new_state,x=new_x,y=new_y),
+			previous=State(state=old_hyp.current.state,x=old_hyp.current.x,y=old_hyp.current.y)
+		)
 
 	else:
 
-		new_hyp = {
-			'state':1,
-			'x':2,
-			'y':3,
-			'prev state':None,
-			'prev x':None,
-			'prev y':None,
-		}
+		new_hyp = Hypothesis(
+			current=initial_state,
+			previous=State(state=None,x=None,y=None)
+		)
 
 	return new_hyp
 @
@@ -250,21 +257,24 @@ import random
 \subsection{Microtests}
 <<microtests>>=
 def microtest(h):
-	state = h['state']
-	x = h['x']
-	y = h['y']
-	prev_state = h['prev state']
-	prev_x = h['prev x']
-	prev_y = h['prev y']
 
-	truth = truth_table[state]
-	prev_truth = truth_table.get(prev_state)
+	previous = h.previous
+	current = h.current
 
-	registers_are_valid = truth.action(prev_x, prev_y, x, y)
+	action = truth_table[current.state].action
+	prev_truth = truth_table.get(previous.state)
 
-	x_is_zero = prev_x is None or ((prev_x == 0) and (prev_truth.xeq0 == state))
-	x_gt_zero = prev_x is None or ((prev_x > 0) and (prev_truth.xgt0 == state))
-	state_is_valid = x_is_zero or x_gt_zero
+	registers_are_valid = action(
+		previous.x,
+		previous.y,
+		current.x,
+		current.y,)
+
+	state_is_valid = (
+		previous.x is None
+		or ((previous.x == 0) and (prev_truth.xeq0 == current.state))
+		or ((previous.x > 0) and (prev_truth.xgt0 == current.state))
+	)
 
 	return registers_are_valid and state_is_valid
 
@@ -273,51 +283,40 @@ microtests = [
 ]
 @
 
-\subsection{Diffuse Agent}
-<<diffuse agent>>=
-def diffuse_agent(agent, swarm, new_hyp_function, random):
-	if agent.active:
-		polled_agent = agent
-		while polled_agent is agent:
-			polled_agent = random.choice(swarm)
-		if polled_agent.hypothesis == agent.hypothesis:
-			agent.active = False
-
-	if not agent.active:
-		agent.hypothesis = new_hyp_function(random)
-@
-
 \subsection{Execution}
+
+This uses context sensitive diffusion, when I diffused the swarm asynchronously convergence appeared to happen about twice as fast.
+
 <<run turing sds>>=
 def run_turing_sds(swarm, max_iterations):
 
-	new_hyp_function = functools.partial(
+	new_hyp_func = functools.partial(
 		random_hypothesis_function,
-		swarm=swarm,)
-
-	complete = False
+		swarm=swarm,
+		initial_state=State(state=1,x=6,y=3),
+	)
 
 	for iteration in range(max_iterations):
-		print(iteration,'before diffusion')
-		for agent in swarm:
-			diffuse_agent(agent, swarm, new_hyp_function, random)
+		print(iteration)
 
-		print(iteration,'before testing')
-		for agent in swarm:
-			agent.active = random.choice(microtests)(agent.hypothesis)
+		sds.context_sensitive_diffusion(swarm, random, new_hyp_func)
+
+		sds.test_phase(swarm, microtests, random)
 
 		for agent in swarm:
-			if agent.active and agent.hypothesis['state'] == 4:
-				success = agent
-				break
-		else:
-			success = None
-		
-		if success:
-			print(iteration,success.hypothesis)
-			break
 
-	#print(swarm)
+			if agent.active:
+
+				agent_state = truth_table[agent.hypothesis.current.state]
+
+				if agent_state.action is halt:
+
+					success = agent
+
+					print(
+						'At iteration',iteration,
+						' y :=',success.hypothesis.current.y)
+					return
 @
 
 <<imports>>=
@@ -328,8 +327,7 @@ import functools
 <<test>>=
 def test():
 	swarm = sds.Agent.initialise(100)
-	run_turing_sds(swarm, max_iterations=100)
-	#pprint([(agent.hypothesis,agent.active) for agent in swarm])
+	run_turing_sds(swarm, max_iterations=100000)
 
 do_test = True
 if do_test:
@@ -344,14 +342,39 @@ from pprint import pprint
 \subsection{Script}
 <<*>>=
 <<imports>>
+<<data structures>>
 <<addition truth table>>
 <<random hypothesis function>>
 <<microtests>>
-<<diffuse agent>>
 <<run turing sds>>
 <<test>>
 @
 
+\section{Explanation}
+
+Turing SDS can do anything NORMA2 can do.
+NORMA2 has been proven turing complete.
+It runs similarly to standard SDS, I can even use diffusion phase and test phase functions from my library.
+The differences lie in the microtests, and random hypothesis function.
+
+\subsection{New Hypotheses}
+New hypotheses are generated thus, poll a random agent, if that agent is not active then assume the hypothesis of the initial state.
+\begin{description}
+\item[previous x] \texttt{null}
+\item[previous y] \texttt{null}
+\item[previous state] \texttt{null}
+\item[current x] (Something hardcoded) e.g. 2
+\item[current y] (Something hardcoded) e.g. 3
+\item[current state] 1
+\end{description}
+
+If the polled agent is active initialise your ``previous'' values with their ``current'' values. Make new x and y values by taking their ``current'' x and y values and apply one of the operations {no change, inc x, inc y, dec x, dec y}, assume the ``current state'' by looking at the truth table for the polled agents ``current state'' and taking either the next state from the ``x equals zero'' column, or the ``x greater than zero'' column. Return your new hypothesis.
+
+
+\subsection{Microtests}
+There is one microtest, it takes a hypothesis and returns True if the register values are valid and the selected state is valid.
+
+Registers are valid if the difference between your hypothesised ``previous x and y'' and your hypothesised ``current x and y'' is the difference expected from the action at your hypothesised ``current state''. The state is valid if the ``previous x'' is \texttt{null} (i.e. this is the initial state) or if ``previous x'' was equal to zero and the hypothesised ``current state'' is the state to transition into when the ``previous state'' had x equal to zero, or if ``previous x'' was greater than zero and the hypothesised ``current state'' is the state to transition into when the ``previous state'' had x greater than zero.
 
 \appendix{}
 
