@@ -1,0 +1,833 @@
+% tikzpic.tex
+\documentclass[crop,tikz]{standalone}% 'crop' is the default for v1.0, before it was 'preview'
+\usetikzlibrary{fit}
+\usetikzlibrary{positioning}
+\usepackage{mathpazo}
+%\usetikzlibrary{...}% tikz package already loaded by 'tikz' option
+
+\begin{document}
+\tikzstyle{box} = [text width=10em]
+\tikzstyle{state} = [thick, rectangle, align=center, minimum width=5.95cm, minimum height=2cm, node distance=3cm, text centered, draw=black]
+\tikzstyle{doublearrow} = [thick,<->,shorten >=1,shorten <=1]
+\tikzstyle{statearrow} = [ultra thick,->,shorten >=0,shorten <=0]
+\tikzstyle{readarrow} = [thick,->,shorten >=0,shorten <=0,draw=red]
+\tikzstyle{agent} = [circle,draw=black,outer sep=0cm,node distance=1.2cm]
+\tikzstyle{active} = [agent,fill=yellow]
+\tikzstyle{inactive} = [agent,fill=lightgray]
+
+% slide 1/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Initialisation};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(0,0)};
+\node (incy2) [inactive,right of=incy1] {(0,0)};
+\node (incy3) [inactive,right of=incy2] {(0,0)};
+\node (incy4) [inactive,right of=incy3] {(0,0)};
+\node (incy5) [inactive,right of=incy4] {(0,0)};
+
+% State #3 "X = 0" agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(0,0)};
+
+% State #4 "X > 0" agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(0,0)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+\end{tikzpicture}
+
+% slide 2/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Context-Sensitive \mbox{Diffusion}};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(0,0)};
+\node (incy2) [inactive,right of=incy1] {(0,0)};
+\node (incy3) [inactive,right of=incy2] {(0,0)};
+\node (incy4) [inactive,right of=incy3] {(0,0)};
+\node (incy5) [inactive,right of=incy4] {(0,0)};
+
+\draw [readarrow,bend left ] (incy1.north east) to (incy2.north west);
+\draw [readarrow,bend left ] (incy2.north east) to (incy5.north west);
+\draw [readarrow,bend left ] (incy3.north east) to (incy4.north west);
+\draw [readarrow,bend right] (incy4.north east) to (incy1.north west);
+\draw [readarrow,bend right] (incy5.north east) to (incy2.north west);
+
+% State #3 "X = 0" agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(0,0)};
+
+\draw [readarrow,bend left ] (xeqz1.north east) to (xeqz2.north west);
+\draw [readarrow,bend right] (xeqz2.north east) to (xeqz1.north west);
+\draw [readarrow,bend right] (xeqz3.north east) to (xeqz1.north west);
+\draw [readarrow,bend right] (xeqz4.north east) to (xeqz4.north west);
+\draw [readarrow,bend right] (xeqz5.north east) to (xeqz2.north west);
+
+% State #4 "X > 0" agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(0,0)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+\draw [readarrow,bend left ] (xgtz1.north east) to (xgtz4.north west);
+\draw [readarrow,bend left ] (xgtz2.north east) to (xgtz3.north west);
+\draw [readarrow,bend right] (xgtz3.north east) to (xgtz2.north west);
+\draw [readarrow,bend left ] (xgtz4.north east) to (xgtz5.north west);
+\draw [readarrow,bend right] (xgtz5.north east) to (xgtz2.north west);
+
+\end{tikzpicture}
+
+% slide 3/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {New Hypothesis Generation};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(0,0)};
+\node (incy2) [inactive,right of=incy1] {(0,0)};
+\node (incy3) [inactive,right of=incy2] {(0,0)};
+\node (incy4) [inactive,right of=incy3] {(0,0)};
+\node (incy5) [inactive,right of=incy4] {(0,0)};
+
+% INCY reads INIT (3,2,5,4,5)
+\draw [readarrow] (incy1.north) -- (init3.south);
+\draw [readarrow] (incy2.north) -- (init2.south);
+\draw [readarrow] (incy3.north) -- (init5.south);
+\draw [readarrow] (incy4.north) -- (init4.south);
+\draw [readarrow] (incy5.north) -- (init5.south);
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(0,0)};
+
+% X=0 reads INCY (1,3,3,1,5)
+\draw [readarrow] (xeqz1.north) -- (incy1.south);
+\draw [readarrow] (xeqz2.north) -- (incy3.south);
+\draw [readarrow] (xeqz3.north) -- (incy3.south);
+\draw [readarrow] (xeqz4.north) -- (incy1.south);
+\draw [readarrow] (xeqz5.north) -- (incy5.south);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(0,0)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+% X>0 reads INCY (3,1,3,4,4)
+\draw [readarrow] (xgtz1.north) -- (incy3.south);
+\draw [readarrow] (xgtz2.north) -- (incy1.south);
+\draw [readarrow] (xgtz3.north) -- (incy3.south);
+\draw [readarrow] (xgtz4.north) -- (incy4.south);
+\draw [readarrow] (xgtz5.north) -- (incy4.south);
+
+\end{tikzpicture}
+
+% slide 4/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Adopting Peturbed Hypotheses};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(1,1)};
+\node (incy2) [inactive,right of=incy1] {(2,2)};
+\node (incy3) [inactive,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(0,2)};
+\node (incy5) [inactive,right of=incy4] {(2,2)};
+
+% INCY reads INIT (3,2,5,4,5)
+\draw [readarrow] (incy1.north) -- (init3.south);
+\draw [readarrow] (incy2.north) -- (init2.south);
+\draw [readarrow] (incy3.north) -- (init5.south);
+\draw [readarrow] (incy4.north) -- (init4.south);
+\draw [readarrow] (incy5.north) -- (init5.south);
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(0,0)};
+
+% X=0 reads INCY (1,3,3,1,5)
+%\draw [readarrow] (xeqz1.north) -- (incy1.south);
+%\draw [readarrow] (xeqz2.north) -- (incy3.south);
+%\draw [readarrow] (xeqz3.north) -- (incy3.south);
+%\draw [readarrow] (xeqz4.north) -- (incy1.south);
+%\draw [readarrow] (xeqz5.north) -- (incy5.south);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(0,0)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+% X>0 reads INCY (3,1,3,4,4)
+%\draw [readarrow] (xgtz1.north) -- (incy3.south);
+%\draw [readarrow] (xgtz2.north) -- (incy1.south);
+%\draw [readarrow] (xgtz3.north) -- (incy3.south);
+%\draw [readarrow] (xgtz4.north) -- (incy4.south);
+%\draw [readarrow] (xgtz5.north) -- (incy4.south);
+
+\end{tikzpicture}
+
+% slide 5/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Test Phase};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(1,1)};
+\node (incy2) [inactive,right of=incy1] {(2,2)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(0,2)};
+\node (incy5) [inactive,right of=incy4] {(2,2)};
+
+% INCY reads INIT (3,2,5,4,5)
+%\draw [readarrow] (incy1.north) -- (init3.south);
+%\draw [readarrow] (incy2.north) -- (init2.south);
+%\draw [readarrow] (incy3.north) -- (init5.south);
+%\draw [readarrow] (incy4.north) -- (init4.south);
+%\draw [readarrow] (incy5.north) -- (init5.south);
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(0,0)};
+
+% X=0 reads INCY (1,3,3,1,5)
+%\draw [readarrow] (xeqz1.north) -- (incy1.south);
+%\draw [readarrow] (xeqz2.north) -- (incy3.south);
+%\draw [readarrow] (xeqz3.north) -- (incy3.south);
+%\draw [readarrow] (xeqz4.north) -- (incy1.south);
+%\draw [readarrow] (xeqz5.north) -- (incy5.south);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(0,0)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+% X>0 reads INCY (3,1,3,4,4)
+%\draw [readarrow] (xgtz1.north) -- (incy3.south);
+%\draw [readarrow] (xgtz2.north) -- (incy1.south);
+%\draw [readarrow] (xgtz3.north) -- (incy3.south);
+%\draw [readarrow] (xgtz4.north) -- (incy4.south);
+%\draw [readarrow] (xgtz5.north) -- (incy4.south);
+
+\end{tikzpicture}
+
+% slide 6/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Context-Sensitive \mbox{Diffusion}};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(1,1)};
+\node (incy2) [inactive,right of=incy1] {(2,2)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(0,2)};
+\node (incy5) [inactive,right of=incy4] {(2,2)};
+
+\draw [readarrow,bend right] (incy1.north east) to (incy1.north west);
+\draw [readarrow,bend left ] (incy2.north east) to (incy3.north west);
+\draw [readarrow,bend left ] (incy3.north east) to (incy5.north west);
+\draw [readarrow,bend right] (incy4.north east) to (incy2.north west);
+\draw [readarrow,bend right] (incy5.north east) to (incy3.north west);
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(0,0)};
+
+\draw [readarrow,bend left ] (xeqz1.north east) to (xeqz4.north west);
+\draw [readarrow,bend right] (xeqz2.north east) to (xeqz1.north west);
+\draw [readarrow,bend left ] (xeqz3.north east) to (xeqz5.north west);
+\draw [readarrow,bend right] (xeqz4.north east) to (xeqz1.north west);
+\draw [readarrow,bend right] (xeqz5.north east) to (xeqz5.north west);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(0,0)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+\draw [readarrow,bend left ] (xgtz1.north east) to (xgtz2.north west);
+\draw [readarrow,bend left ] (xgtz2.north east) to (xgtz5.north west);
+\draw [readarrow,bend left ] (xgtz3.north east) to (xgtz4.north west);
+\draw [readarrow,bend right] (xgtz4.north east) to (xgtz2.north west);
+\draw [readarrow,bend right] (xgtz5.north east) to (xgtz5.north west);
+
+\end{tikzpicture}
+
+% slide 7/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {New Hypothesis Generation};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(1,1)};
+\node (incy2) [inactive,right of=incy1] {(1,3)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(0,2)};
+\node (incy5) [inactive,right of=incy4] {(1,3)};
+
+\draw [readarrow] (incy1.north) -- (init1.south);
+\draw [readarrow] (incy4.north) -- (init3.south);
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(0,0)};
+
+% X=0 reads INCY (4,2,1,4,3)
+\draw [readarrow] (xeqz1.north) -- (incy4.south);
+\draw [readarrow] (xeqz2.north) -- (incy2.south);
+\draw [readarrow] (xeqz3.north) -- (incy1.south);
+\draw [readarrow] (xeqz4.north) -- (incy4.south);
+\draw [readarrow] (xeqz5.north) -- (incy3.south);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(0,0)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+% X>0 reads INCY (3,5,4,2,4)
+\draw [readarrow] (xgtz1.north) -- (incy3.south);
+\draw [readarrow] (xgtz2.north) -- (incy5.south);
+\draw [readarrow] (xgtz3.north) -- (incy4.south);
+\draw [readarrow] (xgtz4.north) -- (incy2.south);
+\draw [readarrow] (xgtz5.north) -- (incy4.south);
+
+\end{tikzpicture}
+
+% slide 8/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Adopting Peturbed Hypotheses};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(0,2)};
+\node (incy2) [inactive,right of=incy1] {(1,3)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(1,1)};
+\node (incy5) [inactive,right of=incy4] {(1,3)};
+
+\draw [readarrow] (incy1.north) -- (init1.south);
+\draw [readarrow] (incy4.north) -- (init3.south);
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(1,3)};
+
+\draw [readarrow] (xeqz5.north) -- (incy3.south);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(1,2)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+\draw [readarrow] (xgtz1.north) -- (incy3.south);
+
+\end{tikzpicture}
+
+% slide 9/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Test Phase};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(0,2)};
+\node (incy2) [  active,right of=incy1] {(1,3)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(1,1)};
+\node (incy5) [  active,right of=incy4] {(1,3)};
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(1,3)};
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(1,2)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+\end{tikzpicture}
+
+% slide 10/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Context-Sensitive \mbox{Diffusion}};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(0,2)};
+\node (incy2) [  active,right of=incy1] {(1,3)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(1,1)};
+\node (incy5) [  active,right of=incy4] {(1,3)};
+
+\draw [readarrow,bend left ] (incy1.north east) to (incy5.north west);
+\draw [readarrow,bend right] (incy2.north east) to (incy2.north west);
+\draw [readarrow,bend left ] (incy3.north east) to (incy4.north west);
+\draw [readarrow,bend right] (incy4.north east) to (incy3.north west);
+\draw [readarrow,bend right] (incy5.north east) to (incy1.north west);
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(1,3)};
+
+\draw [readarrow,bend right] (xeqz1.north east) to (xeqz1.north west);
+\draw [readarrow,bend left ] (xeqz2.north east) to (xeqz5.north west);
+\draw [readarrow,bend right] (xeqz3.north east) to (xeqz3.north west);
+\draw [readarrow,bend right] (xeqz4.north east) to (xeqz2.north west);
+\draw [readarrow,bend right] (xeqz5.north east) to (xeqz5.north west);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(1,2)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+\draw [readarrow,bend left ] (xgtz1.north east) to (xgtz3.north west);
+\draw [readarrow,bend left ] (xgtz2.north east) to (xgtz3.north west);
+\draw [readarrow,bend left ] (xgtz3.north east) to (xgtz5.north west);
+\draw [readarrow,bend right] (xgtz4.north east) to (xgtz2.north west);
+\draw [readarrow,bend right] (xgtz5.north east) to (xgtz2.north west);
+\end{tikzpicture}
+
+% slide 11/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {New Hypothesis Generation};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(1,3)};
+\node (incy2) [inactive,right of=incy1] {(1,3)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(1,3)};
+\node (incy5) [  active,right of=incy4] {(1,3)};
+
+\draw [readarrow] (incy2.north) -- (init1.south);
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,0)};
+\node (xeqz2) [inactive,right of=xeqz1] {(0,0)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(1,3)};
+
+% X=0 reads INCY (5,5,2,2,1)
+\draw [readarrow] (xeqz1.north) -- (incy5.south);
+\draw [readarrow] (xeqz2.north) -- (incy5.south);
+\draw [readarrow] (xeqz3.north) -- (incy2.south);
+\draw [readarrow] (xeqz4.north) -- (incy2.south);
+\draw [readarrow] (xeqz5.north) -- (incy1.south);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(1,2)};
+\node (xgtz2) [inactive,right of=xgtz1] {(0,0)};
+\node (xgtz3) [inactive,right of=xgtz2] {(0,0)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+% X>0 reads INCY (1,3,3,1,4)
+\draw [readarrow] (xgtz1.north) -- (incy1.south);
+\draw [readarrow] (xgtz2.north) -- (incy3.south);
+\draw [readarrow] (xgtz3.north) -- (incy3.south);
+\draw [readarrow] (xgtz4.north) -- (incy1.south);
+\draw [readarrow] (xgtz5.north) -- (incy4.south);
+\end{tikzpicture}
+
+% slide 12/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Adopting Peturbed Hypotheses};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(1,3)};
+\node (incy2) [inactive,right of=incy1] {(0,2)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [inactive,right of=incy3] {(1,3)};
+\node (incy5) [  active,right of=incy4] {(1,3)};
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,3)};
+\node (xeqz2) [inactive,right of=xeqz1] {(1,3)};
+\node (xeqz3) [inactive,right of=xeqz2] {(0,0)};
+\node (xeqz4) [inactive,right of=xeqz3] {(0,0)};
+\node (xeqz5) [inactive,right of=xeqz4] {(1,3)};
+
+% X=0 reads INCY (5,5,2,2,1)
+\draw [readarrow] (xeqz1.north) -- (incy5.south);
+\draw [readarrow] (xeqz2.north) -- (incy5.south);
+%\draw [readarrow] (xeqz3.north) -- (incy2.south);
+%\draw [readarrow] (xeqz4.north) -- (incy2.south);
+%\draw [readarrow] (xeqz5.north) -- (incy1.south);
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(1,2)};
+\node (xgtz2) [inactive,right of=xgtz1] {(1,3)};
+\node (xgtz3) [inactive,right of=xgtz2] {(1,4)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+% X>0 reads INCY (1,3,3,1,4)
+\draw [readarrow] (xgtz2.north) -- (incy3.south);
+\draw [readarrow] (xgtz3.north) -- (incy3.south);
+\end{tikzpicture}
+
+% slide 13/13
+\begin{tikzpicture}
+\node [state] (stateinit) {};
+\node (title) [anchor=east,box] at (stateinit.west) {Test Phase};
+\node [anchor=north west] (stateinitlabel) at (stateinit.north west) {\Huge{INIT}};
+\node (stateincy) [state, below of=stateinit]{};
+\node [anchor=north west] (stateincylabel) at (stateincy.north west) {\Huge{INC Y}};
+\node (statexgtz) [state, anchor=north] at ([yshift=-1cm,xshift=1cm]stateincy.south east){};
+\node [anchor=north west,scale=2] (stategtzlabel) at (statexgtz.north west) {$X>0$};
+\node (statexeqz) [state, anchor=north] at ([yshift=-1cm,xshift=-1cm]stateincy.south west){};
+\node [anchor=north west,scale=2] (stateeqzlabel) at (statexeqz.north west) {$X=0$};
+
+\draw [statearrow] ([yshift=0cm]stateincy.north) -- ([yshift=0cm]stateinit.south);
+\draw [statearrow] ([yshift=0cm]statexeqz.north) -- ([yshift=0cm]stateincy.south west);
+\draw [statearrow] ([yshift=0cm]statexgtz.north) -- ([yshift=0cm]stateincy.south east);
+
+% State #1 "INIT" agents
+\node (init1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateinit.south west)
+                                        {(1,2)};
+\node (init2) [  active,right of=init1] {(1,2)};
+\node (init3) [  active,right of=init2] {(1,2)};
+\node (init4) [  active,right of=init3] {(1,2)};
+\node (init5) [  active,right of=init4] {(1,2)};
+
+% State #2 "INC Y" agents
+\node (incy1) [  active,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (stateincy.south west)
+                                        {(1,3)};
+\node (incy2) [inactive,right of=incy1] {(0,2)};
+\node (incy3) [  active,right of=incy2] {(1,3)};
+\node (incy4) [  active,right of=incy3] {(1,3)};
+\node (incy5) [  active,right of=incy4] {(1,3)};
+
+% State #3 X=0 agents
+\node (xeqz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexeqz.south west)
+                                        {(0,3)};
+\node (xeqz2) [inactive,right of=xeqz1] {(1,3)};
+\node (xeqz3) [inactive,right of=xeqz2] {(1,3)};
+\node (xeqz4) [inactive,right of=xeqz3] {(2,3)};
+\node (xeqz5) [inactive,right of=xeqz4] {(1,3)};
+
+% State #4 X>0 agents
+\node (xgtz1) [inactive,anchor=south west,xshift=0.21cm,yshift=0.25cm] at (statexgtz.south west)
+                                        {(1,2)};
+\node (xgtz2) [  active,right of=xgtz1] {(1,3)};
+\node (xgtz3) [inactive,right of=xgtz2] {(1,4)};
+\node (xgtz4) [inactive,right of=xgtz3] {(0,0)};
+\node (xgtz5) [inactive,right of=xgtz4] {(0,0)};
+
+\end{tikzpicture}
+
+\end{document}

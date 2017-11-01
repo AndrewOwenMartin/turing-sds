@@ -1,0 +1,28 @@
+Hi Vincent,
+
+Please find attached our extended abstract “WHAT IS COGNITION IF NOT INTERACTION?”; thanks so much for considering it for this year’s PT-AI event.
+
+1. Communicating author – me [j. mark bishop] (m.bishop@gold.ac.uk)
+2. John Howroyd - J.Howroyd@gold.ac.uk
+3. Andrew Martin – A.Martin@gold.ac.uk
+
+All three authors (cc’d to this) are based at TCIDA, Goldsmiths, University of London, New Cross, London.
+
+Briefly, in this paper (its title, a nod to ‘Port and van Gelder’, of course) we demonstrate [for the first time] progress towards developing a swarm intelligence algorithm - based on interacting communicating processes - that is Turing complete. I think this is a relatively an important result – not least as the core principle underlying the interacting processes are (a) analogous to the behaviour of certain [tandem running] ant species (in nest/resource location tasks) and (b) are based on communications NOT computations (although, of course, they can be described [and simulated] computationally); the latter feature, positions out work in a different class to both Siegelmann and Sontag’s Turing Complete RNN (Recurrent Neural Network), and the Google/DeepMind team (of Grave, Wayne & Danihelka) 2014 NTM (Neural Turing Machine), both of which remain implicitly – if not explicitly - grounded on computational processes (summations, multiplications, activation-functions etc.).
+
+Cheers,
+- mark
+
+ ------------------------------------------------------------------------ 
+- Prof J. Mark Bishop,
+Director, TCIDA (The Centre for Intelligent Data Analytics),
+1/B St. James’ Hall, 
+Goldsmiths, University of London,
+New Cross, LONDON. 
+SE14 6NW
+ 
+Probing the limits of Deep Learning, Neural Networks and AI; see GOTO London keynote <bit.ly/2kmUZDg <https://t.co/redirect?url=https%3A%2F%2Ft.co%2F6zSn2NGH2j%3Fcn%3DbWVudGlvbg%253D%253D&t=1&cn=bWVudGlvbg%3D%3D&sig=9dbe13db6d8de167b2c925c6d4f6ad675c03392b&iid=942f5002ae5f439bb2cf43dfe43e7e2a&uid=3083638078&nid=4+1268>>
+Can robots feel? See TEDx: <https://www.youtube.com/watch?v=qUNHyPFvUWc&feature=youtu.be>
+ 
+
+

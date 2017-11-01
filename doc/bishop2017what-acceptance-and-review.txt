@@ -1,0 +1,188 @@
+Hi andy, John,
+
+The PTAI paper has een accepted..
+
+All we have to do now is show SDS is Turing complete over the next few weeks; easy (
+
+Hope to see ya tomorrow (Ada permitting)
+
+- mark
+
+ ------------------------------------------------------------------------ 
+- Prof J. Mark Bishop,
+Director, TCIDA (The Centre for Intelligent Data Analytics),
+1/B St. James’ Hall, 
+Goldsmiths, University of London,
+New Cross, LONDON. 
+SE14 6NW
+ 
+Probing the limits of Deep Learning, Neural Networks and AI; see GOTO London keynote <bit.ly/2kmUZDg <https://t.co/redirect?url=https%3A%2F%2Ft.co%2F6zSn2NGH2j%3Fcn%3DbWVudGlvbg%253D%253D&t=1&cn=bWVudGlvbg%3D%3D&sig=9dbe13db6d8de167b2c925c6d4f6ad675c03392b&iid=942f5002ae5f439bb2cf43dfe43e7e2a&uid=3083638078&nid=4+1268>>
+Can robots feel? See TEDx: <https://www.youtube.com/watch?v=qUNHyPFvUWc&feature=youtu.be>
+ 
+
+On 02/10/2017, 07:22, "PT-AI 2017" <ptai2017@easychair.org> wrote:
+
+    Dear Dr Bishop,
+    
+    thank you again for submitting your paper 77 "What is cognition if not interaction?" to the PT-AI conference in 2017!
+    
+    We had 77 submissions and are planning two days with max. two parallel sessions - so we could accept 28 presentations (1/3). I am really glad to say that we only accepted papers where we can pretty much guarantee from the extended abstracts that they will result in very strong presentations.
+    
+    My thanks to the distinguished program committee for all the great work they did in nearly 200 reviews! Now, after all this, we decided into which of the 3 categories papers fall: Accept as paper / Accept as poster / Reject. I am glad to inform you that your submission 77 was
+    
+    Accepted as paper
+    
+    There is a small technical detail to be sorted out with the University of Leeds about the registration process. For this reason, I will send you a second mail with further details on registration and programme by tomorrow. Please wait until then before you ask me about things.
+    
+    Thank you again,
+    
+    and see you soon in Leeds!
+    
+    Yours,
+    
+    Vincent
+    
+    
+    ----------------------- REVIEW 1 ---------------------
+    PAPER: 77
+    TITLE: What is cognition if not interaction?
+    AUTHORS: J Mark Bishop, John Howroyd and Andrew Martin
+    
+    Overall evaluation: 0 (borderline paper)
+    Reviewer's confidence: 5 ((expert))
+    
+    ----------- Overall evaluation -----------
+    {{Reviewer's comments in double braces.}}
+    
+    What might cognition be if not computation?
+    
+    {{
+    In general assuming that just because we use a noun (e.g. "computation", "consciousness", "cognition") there is some unique referent, so that we can ask what that referent is can produce deep muddles.
+    
+    Contrast collecting many cases and examining their similarities and differences and relationships to other things of interest. There are many forms of cognition (e.g. information processing in hugely varying biological organisms, at various levels from temperature control to solving mathematical problems) and many forms of computation (including various familiar sorts of analog, digital and hybrid computation, including computation in both physical and virtual machines, including networked virtual machines, and with more or less rich interactions with environments of various kinds (physical, computational, etc.), and there are also less familiar forms of computation still not well understood occurring in nature, e.g. information processing in many kinds of organism, and many biological subsystems of organisms, e.g. brains, reproductive mechanisms, immune subsystems, etc., and hordes of chemistry based control systems.
+    
+    I am using "information" in its old use, i.e. it is something that can not only be acquired, stored, manipulated, transmitted, etc. but it can also be used for many purposes: the whole point of information. This is not Shannon's confusing technical hijacked use associated with a measure. (Shannon understood the difference, but unfortunately many admirers were confused.)
+    
+    If the paper is accepted I hope the author will substitute a question more worthy of discussion in 2017.
+    }} 
+    
+    ... as Hodges writes [6], "To understand the [Turing] model of `the brain', it was crucial to see that it regarded physics and chemistry, including all the arguments about quantum mechanics ... as essentially irrelevant. 
+    
+    {{Yet in that very paper Turing wrote "In the nervous system chemical phenomena are at least as important as electrical. He must at that time already have had some of the ideas published in his 1952 paper on the chemical basis of morphogenesis. Is there a clue about what sort of long term project he was considering -- cut short by his death in 1954.
+    (I think he was far more broad minded than either his attackers or his defenders, and certainly did not think Turing machines were the last word in general mechanisms of computation.)
+    
+    Compare UKCRC Grand challenge 7
+    https://www.cs.york.ac.uk/nature/gc7/
+    }}
+    
+    
+     However, at the classical heart of both strands of AI, ... 
+    
+    {{ The sort of claim I expect from people who don't work in AI and don't engage with the many different kinds of researchers currently active -- including different sorts of roboticists, emotion modellers, natural language researchers, people studying automated mathematical discovery, ethological modelling, ... 
+     
+    "both" ?
+     The suggestion that AI has two strands is a gross over-simplification.
+     Compare:
+     
+       author = {M. A. Boden},
+       year = {2006},
+       title = {{Mind As Machine: A history of Cognitive Science (Vols 1--2)}},
+       publisher = {Oxford University Press},
+       address = {Oxford},
+     
+     }}
+    
+    ===
+    
+       This mechanistic [Turing Machine] conception of mind effectively views thought and
+    cognition as a ballistic process: once the chains of computation are in execution - the
+    initial values in place and the mechanisms in motion - the outcome is fully determined.
+    
+    {{
+    Anyone trying to build a self-driving intelligent car based on that design would never sell one, and would probably die in early tests.
+    
+    This completely ignores a huge amount of AI work on systems with multiple interfaces to rich external environments, including other agents in some cases.
+    
+    Even Grey Walter's tortoise doesn't fit that description, simple as it was.
+    }}
+    
+    However, over the last 60 years the philosophical doctrines underlying computationalism
+    have been put to question. 
+    
+    {{
+    It would take less than 60 minutes, not years, to demolish such a misguided, impoverished project.
+    
+    I strongly recommend the Popper/Rapaport advice. If you want to criticise something FIRST state it in its strongest and most plausible form, correcting as many errors as possible, to improve it. THEN say what's wrong with it.
+    
+    Knocking down straw men wastes everyone's time.
+    
+    Instead of citing Dreyfus, Dennett, Penrose, Searle, etc. why not look at critics with more detailed knowledge and experience of what actually goes on in various branches of AI -- including various kinds of robotics, theorem proving, NLP, emotion/motivation modelling, etc. It all has serious gaps. So did Newton's physics.
+    
+    In particular as far as I can tell from the claims Searle makes about computation being purely syntactic he has never written any programs, and certainly never had to debug a complex virtual machine that e.g. fails to use some available information when it is needed, or does some invalid reasoning with information.
+    
+    I wonder how he thinks his email messages get to their intended recipients across many network connections if email systems deal only with syntax. He should attend some computer science seminars on semantics.
+    
+    I would never employ a programmer who understood only how to make programs perform syntactic operations.
+    
+    Actually I think Penrose may be right about current forms of AI not being capable of modelling the ancient discoveries in geometry and topology (Euclid, Zeno, etc.). It has been suggested that Turing was also thinking about that in his work on Chemistry-based Morphogenesis but we'll never know.
+    
+    But since ancient brains could not be magical they must have used some form of information processing. To replicate that we either need to re-discover some forms of computation evolution produced that current science has not recognized or discover a new kind of virtual machine that can be implemented using current computational mechanisms.
+    }}
+    
+    In contrast, recent research in Communicating and interaction systems2 explores an alter-
+    native metaphor for cognitive processes - based on interacting stochastic diffusion processes
+    [3]3 [8] [12] - that may side-step [at least some of] these issues with computationalism. This
+    talk will summarise recent progress towards demonstrating that communicating popula-
+    tions of interacting stochastic diffusion processes are also Turing complete.
+    
+    {{
+    I think talk of computational metaphors should be dropped. There are computational theories, mechanisms, designs, functions, techniques, applications, etc.
+    
+    If the new work is only producing new *metaphors* as opposed to real information processing systems then it will be of little use for science or engineering, and of little interest in a conference like this.
+    
+    Perhaps that was just a verbal slip, and the full paper really will go beyond metaphors if accepted?
+    
+    The author might find it useful to learn about the varieties of virtual
+    machinery already under investigation and their powers, to compare with the
+    proposed approach for cognitive processes.
+     
+    I'll be very surprised to learn that stochastic diffusion processes can explain
+    how the minds of Euclid, Archimedes, Zeno, Pythagoras, etc. worked when they
+    made their amazing discoveries.
+     
+    Will they explain the kinds of minds produced by biological evolution that can
+    create new richly structured human languages, like the sign language created by
+    deaf children in Nicaragua?
+     https://www.youtube.com/watch?v=pjtioIFuNf8
+     
+    Or the off-line computation apparently done by a Portia spider while it sits and thinks?
+    
+    @Article
+     {tarsitano06,
+       author = {M. Tarsitano},
+       year = {2006},
+       title = {{Route selection by a jumping spider (Portia labiata) during the
+         locomotory phase of a detour}},
+       journal = {Animal Behaviour},
+       volume = {72, Issue 6},
+       month = {December},
+       pages = {1437--1442},
+       url = {http://dx.doi.org/10.1016/j.anbehav.2006.05.007},
+    }
+    
+    It's a pity we have not been given an example of a problem that can be solved, or activities that can be achieved using the proposed new approach, instead of relying on mainly on ill informed attacks on AI.
+    
+    
+    ----------------------- REVIEW 2 ---------------------
+    PAPER: 77
+    TITLE: What is cognition if not interaction?
+    AUTHORS: J Mark Bishop, John Howroyd and Andrew Martin
+    
+    Overall evaluation: 1 (weak accept)
+    Reviewer's confidence: 4 ((high))
+    
+    ----------- Overall evaluation -----------
+    Not sure I see how computationalism still underlies AI. This is only true if AI is more than an engineering discipline for a certain class of problems - but the old view that AI must also be the other side of the coin for cognitive science has been silently dropped by many people in AI. So they are not computationalists, they just don’t need a view on that. - What they do need a view on is whether computation (plus ‘grounding’ perhaps) can generate the behavior they want. So, the objections 1-5 do not seem to catch a theorist of AI that has dropped any cognitive science ambitions. What does the paper do with these? - Having said that, the issues is not dead and at the end, there is promise for a new angle. We went to see that!
+    
+    
+
