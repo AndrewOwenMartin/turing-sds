@@ -153,6 +153,17 @@ init = lambda px,py,x,y: px is None and py is None
 halt = lambda px,py,x,y: x == px and y == py
 xgt0 = lambda px,py,x,y: x == px and y == py and x > 0
 xeq0 = lambda px,py,x,y: x == px and y == py and x == 0
+
+actions = {
+	'inc x':inc_x,
+	'inc y':inc_y,
+	'dec x':dec_x,
+	'dec y':dec_y,
+	'init':init,
+	'halt':halt,
+	'x>0':xgt0,
+	'x=0':xeq0,
+}
 @
 
 \subsection{Truth table in python}
@@ -334,14 +345,30 @@ class TuringSwarm:
 
 		self.agents = sds.Agent.initialise(agent_count)
 
+		for agent in self.agents:
+
+			agent.hypothesis = XY(x=0,y=0)
+
 		self.link(linked_swarms)
+
 
 	def link(self, linked_swarms):
 
+		self.linked_swarms = linked_swarms
+
 		self.new_hyp_fun = functools.partial(
-			self.class_new_hyp_fun,
-			linked_swarms=linked_swarms,
+			generic_new_hyp_function,
+			linked_swarms=self.linked_swarms,
+			peturbation=self.peturbation[0],
 		)
+
+		self.microtest = [
+			functools.partial(
+				generic_microtest,
+				action=actions[self.action],
+				linked_swarms=self.linked_swarms
+			)
+		]
 
 	def iterate(self):
 
@@ -360,49 +387,40 @@ class TuringSwarm:
 <<turing class generic new hyp function>>=
 def generic_new_hyp_function(random, linked_swarms, peturbation):
 
-	polled_agent = random.choice(random.choice(linked_swarms).agents)
+	#polled_agent = random.choice(random.choice(linked_swarms).agents)
+	polled_swarm = random.choice(linked_swarms)
 
-	if polled_agent.active:
+	polled_agent = random.choice(polled_swarm.agents)
 
-		active_hyp = polled_agent.hypothesis.current
+	polled_hyp = polled_agent.hypothesis
 
-		new_x,new_y = peturbation(active_hyp.x, active_hyp.y)
+	new_x,new_y = peturbation(polled_hyp.x, polled_hyp.y)
 
-		new_hyp = Hypothesis(
-			current=XY(x=new_x,y=new_y),
-			previous=XY(x=active_hyp.x,y=active_hyp.y),
-		)
-
-	else:
-
-		new_hyp = Hypothesis(
-			current=State(state=None,x=None,y=None),
-			previous=State(state=None,x=None,y=None),
-		)
+	new_hyp = XY(new_x,new_y)
 
 	return new_hyp
 @
 
 \subsection{Turing microtest}
+
+Each TuringSwarm should have a specific version of this function, with its own action function.
+
 <<turing class generic microtest>>=
-def generic_microtest(hyp, action):
+def generic_microtest(hyp, action, linked_swarms):
 
-	previous = hyp.previous
-	current = hyp.current
+	polled_swarm = random.choice(linked_swarms)
 
-	#state_is_valid = True
+	polled_agent = random.choice(polled_swarm.agents)
 
-	registers_are_valid = (
-		current.x is not None
-		and current.y is not None
-		and action(
-			previous.x,
-			previous.y,
-			current.x,
-			current.y,)
-	)
+	if polled_agent.active:
 
-	return registers_are_valid
+		polled_hyp = polled_agent.hypothesis
+
+		return action(polled_hyp.x, polled_hyp.y, hyp.x, hyp.y)
+
+	else:
+
+		return False
 @
 
 \subsection{Turing classes}
@@ -413,9 +431,15 @@ class Init(TuringSwarm):
 
 	microtest = [lambda hyp: True]
 
+	linked_swarms = None
+
 	def __init__(self, agent_count, x, y):
 
 		self.agents = sds.Agent.initialise(agent_count)
+
+		for agent in self.agents:
+
+			agent.hypothesis = XY(x=x,y=y)
 
 		self.new_hyp_fun = functools.partial(
 			init_rand_hyp_fun,
@@ -425,128 +449,76 @@ class Init(TuringSwarm):
 
 def init_rand_hyp_fun(rnd, a,  b,):
 
-	return Hypothesis(
-		previous=None,
-		current=State(state=None, x=a, y=b),
-	)
+	return XY(x=a,y=b)
 @
 
 \subsubsection{Inc y}
 <<inc y swarm class>>=
 class IncY(TuringSwarm):
 
-	class_new_hyp_fun = functools.partial(
-		generic_new_hyp_function,
-		peturbation=lambda x,y:(x,y+1),)
+	peturbation=[lambda x,y:(x,y+1)]
 
-	microtest = [
-		functools.partial(
-			generic_microtest,
-			action=inc_y,
-		)
-	]
+	action='inc y'
 @
 
 \subsubsection{Dec y}
 <<dec y swarm class>>=
 class DecY(TuringSwarm):
 
-	class_new_hyp_fun = functools.partial(
-		generic_new_hyp_function,
-		peturbation=lambda x,y:(x,y-1),)
+	peturbation=[lambda x,y:(x,y-1)]
 
-	microtest = [
-		functools.partial(
-			generic_microtest,
-			action=dec_y,
-		)
-	]
+	action='dec y'
 @
 
 \subsubsection{Inc x}
 <<inc x swarm class>>=
 class IncX(TuringSwarm):
 
-	class_new_hyp_fun = functools.partial(
-		generic_new_hyp_function,
-		peturbation=lambda x,y:(x+1,y),)
+	peturbation=[lambda x,y:(x+1,y)]
 
-	microtest = [
-		functools.partial(
-			generic_microtest,
-			action=inc_x,
-		)
-	]
+	action='inc x'
 @
 
 \subsubsection{Dec x}
 <<dec x swarm class>>=
 class DecX(TuringSwarm):
 
-	class_new_hyp_fun = functools.partial(
-		generic_new_hyp_function,
-		peturbation=lambda x,y:(x-1,y),)
+	peturbation=[lambda x,y:(x-1,y)]
 
-	microtest = [
-		functools.partial(
-			generic_microtest,
-			action=dec_x,
-		)
-	]
+	action='dec x'
 @
 
 \subsubsection{Halt swarm}
 <<halt swarm class>>=
 class Halt(TuringSwarm):
 
-	class_new_hyp_fun = functools.partial(
-		generic_new_hyp_function,
-		peturbation=lambda x,y:(x,y),)
+	peturbation=[lambda x,y:(x,y)]
 
-	microtest = [
-		functools.partial(
-			generic_microtest,
-			action=halt,
-		)
-	]
+	action='halt'
 @
 
 \subsubsection{$x > 0$ swarm}
 <<xgt0 swarm class>>=
 class XGT0(TuringSwarm):
 
-	class_new_hyp_fun = functools.partial(
-		generic_new_hyp_function,
-		peturbation=lambda x,y:(x,y),)
+	peturbation=[lambda x,y:(x,y)]
 
-	microtest = [
-		functools.partial(
-			generic_microtest,
-			action=xgt0,
-		)
-	]
+	action='x>0'
 @
 
 \subsubsection{$x == 0$ swarm}
 <<xeq0 swarm class>>=
 class XEQ0(TuringSwarm):
 
-	class_new_hyp_fun = functools.partial(
-		generic_new_hyp_function,
-		peturbation=lambda x,y:(x,y),)
+	peturbation=[lambda x,y:(x,y)]
 
-	microtest = [
-		functools.partial(
-			generic_microtest,
-			action=xeq0,
-		)
-	]
+	action='x=0'
 @
 
 \subsection{Run multiple swarms}
 <<run multiple swarms>>=
 def run_multiple_swarms():
-	agent_count = 10
+	agent_count = 5
 	#start = Init(agent_count, 2, 1)
 	#a = IncY(agent_count, [start])
 	#b = IncX(agent_count, [a])
@@ -567,10 +539,10 @@ def run_multiple_swarms():
 	#swarm_names = ('a','b','c','d','e','f')
 
 	repeat_count = 100
-	max_iterations = 2000
+	max_iterations = 5000
 	iterations = []
 	for repeat in range(repeat_count):
-		a = Init(agent_count, 10, 500)
+		a = Init(agent_count, 4, 0)
 		d = IncY(agent_count, None)
 		b = XGT0(agent_count, [a,d])
 		c = DecX(agent_count, [b])
@@ -585,20 +557,46 @@ def run_multiple_swarms():
 			('(E) x==0',e),
 			('(F) Halt',f),
 		)
+		for name, swarm in swarms:
+			print(name,swarm.linked_swarms)
+
+		complete = False
 		for iteration in range(max_iterations):
-			name, swarm = random.choice(swarms)
-			swarm.iterate()
-			clusters = sds.count_clusters(swarm.agents)
-			print("{i:3}".format(i=iteration),name, print_turing_clusters(
-				clusters)
-			)
-			if isinstance(swarm, Halt) and clusters:
-				print('Halted. Output is {answer}.'.format(
-					answer=clusters.most_common(1)[0][0].current.y
+			print(iteration)
+			async = False
+			if async:
+				name, swarm = random.choice(swarms)
+				sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+				for agent in swarm.agents:
+					if not agent.active:
+						agent.active = swarm.microtest[0](agent.hypothesis)
+			else:
+				for name, swarm in swarms:
+					sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+					for agent in swarm.agents:
+						if not agent.active:
+							agent.active = swarm.microtest[0](agent.hypothesis)
+			clusters = sds.count_clusters(f.agents)
+			if clusters:
+				print('Halted after {i} iterations. Output is {answer}.'.format(
+					i=iteration,
+					answer=clusters.most_common(1)[0][0].y
 				))
+				complete = True
+
+			#for name, swarm in swarms:
+			#	#sds.test_phase(swarm=swarm.agents, microtests=swarm.microtest, random=random)
+			#	clusters = sds.count_clusters(swarm.agents)
+			#	if isinstance(swarm, Halt) and clusters:
+			#		print('Halted. Output is {answer}.'.format(
+			#			answer=clusters.most_common(1)[0][0].current.y
+			#		))
+			#		complete = True
+			if complete:
 				break
 		else:
 			print('maximum time reached')
+
 		iterations.append(iteration)
 
 
@@ -700,9 +698,9 @@ from pprint import pprint
 <<random hypothesis function>>
 <<microtests>>
 <<run turing sds>>
-<<turing swarm class>>
 <<turing class generic new hyp function>>
 <<turing class generic microtest>>
+<<turing swarm class>>
 <<init swarm class>>
 <<inc y swarm class>>
 <<dec y swarm class>>
