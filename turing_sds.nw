@@ -153,16 +153,19 @@ init = lambda px,py,x,y: px is None and py is None
 halt = lambda px,py,x,y: x == px and y == py
 xgt0 = lambda px,py,x,y: x == px and y == py and x > 0
 xeq0 = lambda px,py,x,y: x == px and y == py and x == 0
+true = lambda hyp: True
+hypxgt0 = lambda hyp: hyp.x > 0
+hypxeq0 = lambda hyp: hyp.x == 0
 
 actions = {
-	'inc x':inc_x,
-	'inc y':inc_y,
-	'dec x':dec_x,
-	'dec y':dec_y,
-	'init':init,
-	'halt':halt,
-	'x>0':xgt0,
-	'x=0':xeq0,
+	'inc x':true,
+	'inc y':true,
+	'dec x':true,
+	'dec y':true,
+	'init':true,
+	'halt':true,
+	'x>0':hypxgt0,
+	'x=0':hypxeq0,
 }
 @
 
@@ -347,7 +350,7 @@ class TuringSwarm:
 
 		for agent in self.agents:
 
-			agent.hypothesis = XY(x=0,y=0)
+			agent.hypothesis = None
 
 		self.link(linked_swarms)
 
@@ -392,11 +395,17 @@ def generic_new_hyp_function(random, linked_swarms, peturbation):
 
 	polled_agent = random.choice(polled_swarm.agents)
 
-	polled_hyp = polled_agent.hypothesis
+	if polled_agent.active:
 
-	new_x,new_y = peturbation(polled_hyp.x, polled_hyp.y)
+		polled_hyp = polled_agent.hypothesis
 
-	new_hyp = XY(new_x,new_y)
+		new_x,new_y = peturbation(polled_hyp.x, polled_hyp.y)
+
+		new_hyp = XY(new_x,new_y)
+
+	else:
+
+		new_hyp = None
 
 	return new_hyp
 @
@@ -407,6 +416,14 @@ Each TuringSwarm should have a specific version of this function, with its own a
 
 <<turing class generic microtest>>=
 def generic_microtest(hyp, action, linked_swarms):
+
+	if hyp is None:
+
+		return False
+
+	else:
+
+		return action(hyp)
 
 	polled_swarm = random.choice(linked_swarms)
 
@@ -429,7 +446,8 @@ def generic_microtest(hyp, action, linked_swarms):
 <<init swarm class>>=
 class Init(TuringSwarm):
 
-	microtest = [lambda hyp: True]
+	#microtest = [lambda hyp: True]
+	microtest = [lambda hyp: random.choice((False,True))]
 
 	linked_swarms = None
 
@@ -439,7 +457,7 @@ class Init(TuringSwarm):
 
 		for agent in self.agents:
 
-			agent.hypothesis = XY(x=x,y=y)
+			agent.hypothesis = None
 
 		self.new_hyp_fun = functools.partial(
 			init_rand_hyp_fun,
@@ -538,11 +556,13 @@ def run_multiple_swarms():
 
 	#swarm_names = ('a','b','c','d','e','f')
 
-	repeat_count = 100
-	max_iterations = 5000
+	all_animation = []
+	repeat_count = 1
+	max_iterations = 40000
 	iterations = []
 	for repeat in range(repeat_count):
-		a = Init(agent_count, 4, 0)
+		repeat_animation = []
+		a = Init(agent_count, 8, 2)
 		d = IncY(agent_count, None)
 		b = XGT0(agent_count, [a,d])
 		c = DecX(agent_count, [b])
@@ -551,7 +571,7 @@ def run_multiple_swarms():
 		d.link([c])
 		swarms = (
 			('(A) init',a),
-			('(B) x>0 ',b),
+			('(B) x>0',b),
 			('(C) DecX',c),
 			('(D) IncY',d),
 			('(E) x==0',e),
@@ -561,23 +581,59 @@ def run_multiple_swarms():
 			print(name,swarm.linked_swarms)
 
 		complete = False
+		timeout = 10
+
 		for iteration in range(max_iterations):
+			iteration_animation = []
 			print(iteration)
-			async = False
-			if async:
+			#print('active count in init',sum(1 for agent in a.agents if agent.active))
+			#print('agents in init',[(agent.active,agent.hypothesis) for agent in a.agents])
+			#for name, swarm in swarms:
+			#	print('agents in',name,[(agent.active,agent.hypothesis) for agent in swarm.agents])
+
+			# 0 = random swarm, diffuse then test
+			# 1 = diffuse all swarms, test all swarms
+			# 2 = for each swarm in turn, diffuse then test
+			async = 1
+
+			if async == 0:
 				name, swarm = random.choice(swarms)
 				sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
 				for agent in swarm.agents:
 					if not agent.active:
 						agent.active = swarm.microtest[0](agent.hypothesis)
+			elif async == 1:
+				for name, swarm in swarms:
+					if False and name == '(A) init':
+						sds.passive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+					else:
+						sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+					#print(name,[(agent.active,agent.hypothesis) for agent in swarm.agents])
+				for name, swarm in swarms:
+					for agent in swarm.agents:
+						if not agent.active:
+							agent.active = swarm.microtest[0](agent.hypothesis)
+					#print(name,[(agent.active,agent.hypothesis) for agent in swarm.agents])
+				for swarm_num, (name, swarm) in enumerate(swarms):
+					iteration_animation.append(
+						{
+							"swarm name":name,
+							"num":swarm_num,
+							"hypotheses":[(agent.active,agent.hypothesis) for agent in swarm.agents]
+						}
+					)
+				repeat_animation.append(('iteration',iteration,iteration_animation))
 			else:
 				for name, swarm in swarms:
 					sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
 					for agent in swarm.agents:
 						if not agent.active:
 							agent.active = swarm.microtest[0](agent.hypothesis)
+			#print('active count in init',sum(1 for agent in a.agents if agent.active))
 			clusters = sds.count_clusters(f.agents)
 			if clusters:
+				if clusters.most_common(1)[0][1] == agent_count:
+					timeout = 0
 				print('Halted after {i} iterations. Output is {answer}.'.format(
 					i=iteration,
 					answer=clusters.most_common(1)[0][0].y
@@ -593,11 +649,16 @@ def run_multiple_swarms():
 			#		))
 			#		complete = True
 			if complete:
-				break
+				timeout = timeout - 1
+				if timeout <= 0:
+					break
 		else:
 			print('maximum time reached')
+			raise ValueError("choose different values")
 
 		iterations.append(iteration)
+
+		all_animation.append(('repeat',repeat,repeat_animation))
 
 
 	for name, swarm in swarms:
@@ -606,6 +667,10 @@ def run_multiple_swarms():
 	print(iterations,sum(iterations)/repeat_count)
 	with open('/tmp/stdout.txt','w') as file:
 		file.write(str(iterations)+' '+str(sum(iterations)/repeat_count)+'\n')
+
+	print(json.dumps(all_animation))
+	with open('json_animation.json','w') as file:
+		json.dump(all_animation,file)
 @
 
 So with this truth table...[[
@@ -686,6 +751,7 @@ if do_multiple_swarm_test:
 
 <<imports>>=
 import sds
+import json
 from pprint import pprint
 @
 
