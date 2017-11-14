@@ -17,6 +17,8 @@
 % \usepackage[margin=0.5in, paperwidth=19.9in, paperheight=11.1in]{geometry} % 1920 x 1080 Monitor reading (MultiSync EA234WMi)
 % \usepackage[margin=0.5in, paperheight=19.9in, paperwidth=11.1in]{geometry} % 1080 x 1920 Monitor reading (Portrait MultiSync EA234WMi)
 \usepackage{microtype}
+\usepackage[UKenglish]{isodate}% http://ctan.org/pkg/isodate
+\cleanlookdateon% Remove ordinal day reference
 
 \setlength{\columnsep}{1in}
 \setlength{\columnseprule}{1px}
@@ -818,15 +820,310 @@ I think a diagrammatic representation of the following:
 \item An agent from a new swarm polling the newly active agent
 \end{enumerate}
 
-%\appendix{}
-%
-%\section{Index}
-%
-%\nowebindex{}
-%
-%\section{Code Chunks}
-%
-%\nowebchunks{}
+\section{New script}
+<<new script>>=
+<<dependencies>>
+<<hypothesis>>
+<<peturbations>>
+<<turing swarm>>
+<<new hypothesis function>>
+<<microtest function>>
+<<turing swarms>>
+<<initialise swarms>>
+<<asynchronous execution>>
+<<synchronous execution>>
+<<action>>
+@
+
+\section{Hypothesis}
+<<hypothesis>>=
+XY = namedtuple('XY',('x','y'))
+@
+
+<<dependencies>>=
+from collections import namedtuple
+@
+
+\section{Peturbations}
+<<peturbations>>=
+noop = lambda xy: xy
+incx = lambda xy: XY(xy.x+1, xy.y)
+decx = lambda xy: XY(max(0,xy.x-1), xy.y)
+incy = lambda xy: XY(xy.x, xy.y+1)
+decy = lambda xy: XY(xy.x, max(0,xy.y-1))
+
+peturbations = (noop, incx, decx, incy, decy)
+@
+
+\section{Turing Swarm}
+<<turing swarm>>=
+class TuringSwarm:
+
+	def __init__(self, agent_count):
+
+		self.agents = sds.Agent.initialise(agent_count)
+
+	def link(self, swarms):
+
+		self.links = swarms
+
+		self.new_hyp_fun = functools.partial(
+			generic_new_hyp_function,
+			linked_swarms=self.links,
+		)
+
+		self.microtest = [
+			functools.partial(
+				generic_microtest,
+				action=self.action,
+				linked_swarms=self.links,
+			)
+		]
+@
+
+<<dependencies>>=
+import sds
+import functools
+@
+
+\section{Generic New Hypothesis Function}
+<<new hypothesis function>>=
+def generic_new_hyp_function(random, linked_swarms):
+
+	polled_swarm = random.choice(linked_swarms)
+
+	polled_agent = random.choice(polled_swarm.agents)
+
+	polled_hypothesis = polled_agent.hypothesis
+
+	random_peturbation = random.choice(peturbations)
+
+	return random_peturbation(polled_hypothesis)
+@
+
+<<dependencies>>=
+import random
+@
+
+\section{Generic Microtest Function}
+
+If you don't require your polled agent to be active, then the initialisation swarm will always be fully active, which dominates the execution.
+
+<<microtest function>>=
+def generic_microtest(hypothesis, action, linked_swarms):
+
+	polled_swarm = random.choice(linked_swarms)
+
+	polled_agent = random.choice(polled_swarm.agents)
+
+	polled_hypothesis = polled_agent.hypothesis
+
+	modified_hypothesis = action(polled_hypothesis)
+
+	return (
+		polled_agent.active
+		and (modified_hypothesis is not None)
+		and (modified_hypothesis == hypothesis)
+	)
+@
+
+\section{Turing Swarm definitions}
+<<turing swarms>>=
+<<init>>
+<<halt>>
+<<xgt0>>
+<<xeq0>>
+<<incx>>
+<<decx>>
+<<incy>>
+<<decy>>
+@
+
+\subsection{Init swarm}
+<<init>>=
+class Init(TuringSwarm):
+
+	def __init__(self, agent_count, initial_hyp):
+
+		super().__init__(agent_count)
+
+		self.new_hyp_fun = lambda random: initial_hyp
+
+		self.microtest = [lambda hyp: hyp == initial_hyp]
+@
+
+\subsection{Halt swarm}
+<<halt>>=
+class Halt(TuringSwarm):
+
+	def action(self, hyp):
+		return noop(hyp)
+@
+
+\subsection{$X > 0$ swarm}
+<<xgt0>>=
+class XGt0(TuringSwarm):
+
+	def action(self, hyp):
+		if hyp.x > 0:
+			return hyp
+		else:
+			return None
+@
+
+\subsection{$X = 0$ swarm}
+<<xeq0>>=
+class XEq0(TuringSwarm):
+
+	def action(self, hyp):
+		if hyp.x == 0:
+			return hyp
+		else:
+			return None
+@
+
+\subsection{Inc X swarm}
+<<incx>>=
+class IncX(TuringSwarm):
+
+	def action(self, hyp):
+		return incx(hyp)
+@
+
+\subsection{Dec X swarm}
+<<decx>>=
+class DecX(TuringSwarm):
+
+	def action(self, hyp):
+		return decx(hyp)
+@
+
+\subsection{Inc Y swarm}
+<<incy>>=
+class IncY(TuringSwarm):
+
+	def action(self, hyp):
+		return incy(hyp)
+@
+
+\subsection{Dec Y swarm}
+<<decy>>=
+class DecY(TuringSwarm):
+
+	def action(self, hyp):
+		return decy(hyp)
+@
+
+\section{Initialise swarms}
+<<initialise swarms>>=
+def initialise_swarms(swarms):
+	for swarm in swarms:
+		for agent in swarm.agents:
+			agent.hypothesis = XY(
+				x=random.randint(0,9),
+				y=random.randint(0,9),)
+@
+
+\section{Asynchronous Execution}
+<<asynchronous execution>>=
+def asynchronous_execution(swarms, max_iterations):
+
+	swarm_names = ('init','X>0','decX','incY','X==0','halt')
+
+	named_swarms = list(zip(swarm_names,swarms))
+
+	for iteration in range(max_iterations):
+
+		for name, swarm in random.sample(named_swarms,len(named_swarms)):
+
+			sds.passive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+
+			sds.test_phase(swarm.agents, swarm.microtest, random)
+
+		active_counts = [
+			Counter(tuple(agent.hypothesis) for agent in swarm.agents if agent.active).most_common(2)
+			for swarm
+			in swarms
+		]
+
+		print("{x:2}".format(x=iteration+1), list(zip(swarm_names,active_counts)))
+@
+
+\section{Synchronous Execution}
+<<synchronous execution>>=
+def synchronous_execution(swarms, max_iterations):
+
+	swarm_names = ('init','X>0','decX','incY','X==0','halt')
+
+	for iteration in range(max_iterations):
+
+		#sds.passive_diffusion(swarms[0].agents, random, swarms[0].new_hyp_fun)
+		#for swarm in swarms[1:]:
+		#	sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+
+		for swarm in swarms:
+			sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+
+		for swarm in swarms:
+
+			sds.test_phase(swarm.agents, swarm.microtest, random)
+
+		#active_counts = [
+		#	sum(1 for agent in swarm.agents if agent.active)
+		#	for swarm
+		#	in swarms]
+
+		active_counts = [
+			Counter(tuple(agent.hypothesis) for agent in swarm.agents if agent.active).most_common(2)
+			for swarm
+			in swarms
+		]
+
+		print("{x:2}".format(x=iteration+1), list(zip(swarm_names,active_counts)))
+		#print("{x:2}".format(x=iteration+1), 'x>0',active_counts[1])
+		#print("{x:2}".format(x=iteration+1), )
+@
+
+<<dependencies>>=
+from pprint import pprint
+from collections import Counter
+@
+
+\section{Action}
+<<action>>=
+my_init = Init(agent_count=100, initial_hyp=XY(2,3))
+my_xgt0 = XGt0(agent_count=100)
+my_xeq0 = XEq0(agent_count=100)
+my_halt = Halt(agent_count=100)
+my_decx = DecX(agent_count=100)
+my_incy = IncY(agent_count=100)
+
+my_xgt0.link((my_init, my_incy))
+my_xeq0.link((my_init, my_incy))
+my_halt.link((my_xeq0,))
+my_decx.link((my_xgt0,))
+my_incy.link((my_decx,))
+
+swarms = [ my_init, my_xgt0, my_decx, my_incy, my_xeq0, my_halt]
+
+initialise_swarms(swarms)
+
+#print(my_init.microtest(XY(2,3)))
+#print(my_init.microtest(XY(0,0)))
+#print(my_init.new_hyp_fun(random))
+synchronous_execution(swarms,max_iterations=500)
+print('Done')
+@
+
+\appendix{}
+
+\section{Index}
+
+\nowebindex{}
+
+\section{Code Chunks}
+
+\nowebchunks{}
 
 \end{document}
 
