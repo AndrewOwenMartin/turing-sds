@@ -1,0 +1,1129 @@
+\documentclass[11pt]{article}
+
+% \documentclass[twocolumn,12pt]{article}
+\usepackage{hyperref}
+\usepackage{noweb}
+\usepackage{graphicx}
+\noweboptions{longxref,alphasubpage,subscriptidents,subscriptquotedidents,longchunks}
+
+% % Set up formatting to look more like a modern report than an old book.
+\setlength{\parindent}{0em}
+\setlength{\parskip}{1em}
+
+% Default Geometry
+\usepackage[a4paper]{geometry}
+% \usepackage[margin=0.5in, paperwidth=14.15in, paperheight=11.25in]{geometry} % 1280 x 1024 Monitor reading
+% \usepackage[margin=0.5in, paperwidth=16.5in, paperheight=9.25in]{geometry} % 1600 x 900 Monitor reading (ThinkPad)
+% \usepackage[margin=0.5in, paperwidth=19.9in, paperheight=11.1in]{geometry} % 1920 x 1080 Monitor reading (MultiSync EA234WMi)
+% \usepackage[margin=0.5in, paperheight=19.9in, paperwidth=11.1in]{geometry} % 1080 x 1920 Monitor reading (Portrait MultiSync EA234WMi)
+\usepackage{microtype}
+\usepackage[UKenglish]{isodate}% http://ctan.org/pkg/isodate
+\cleanlookdateon% Remove ordinal day reference
+
+\setlength{\columnsep}{1in}
+\setlength{\columnseprule}{1px}
+
+\newcommand{\vref}[1]{\ref{#1},~p.\pageref{#1}}
+
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+
+\title{A Turing Complete SDS}
+\author{Andrew Owen Martin}
+
+\pagestyle{noweb}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Addition}
+See Figure~\vref{fig:add}.
+\begin{figure}
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=2cm, minimum height=1cm,text centered, draw=black, fill=red!30]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+\begin{tikzpicture}[node distance=2cm]
+%\node (A) [startstop] {Start};
+\node (init) [startstop] {(A) $x:=2$, $y:=3$};
+\node (gtz) [startstop,below right of=init] {(B) $x>0$?};
+\node (dec) [startstop,below of=gtz] {(C) DEC $x$};
+\node (inc) [startstop,below of=dec] {(D) INC \(y\)};
+\node (eqz) [startstop,below left of=init] {(E) $x==0$?};
+\node (halt) [startstop,below of=eqz] {(F) Halt};
+%\draw [arrow] (init) -- (eqz);
+%\draw [arrow] (init) -- (gtz);
+%\draw [arrow] (gtz) -- (dec);
+%\draw [arrow] (dec) -- (inc);
+%\draw [arrow] (inc.west) -- ++(-0.5,0) |- (eqz.east);
+%\draw [arrow] (inc.east) -| ++(0.5,0) |- (gtz.east);
+%\draw [arrow] (eqz) -- (halt);
+\draw [arrow] (eqz) -- (init);
+\draw [arrow] (gtz) -- (init);
+\draw [arrow] (dec)  -- (gtz);
+\draw [arrow] (inc)  -- (dec);
+\draw [arrow] (eqz.east) -- ++(0.5,0) |- (inc.west);
+\draw [arrow] (gtz.east) -| ++(0.5,0) |- (inc.east);
+\draw [arrow] (halt) -- (eqz);
+\end{tikzpicture}
+\label{fig:add}
+\caption{Addition flow chart}
+\end{figure}
+
+\begin{table}
+	\centering
+	\begin{tabular}{@{}rlcc@{}}
+		State & Action & Next state if $x==0$ & Next state if $x>0$
+		\\\midrule
+		1 & Init & 4 & 2 \\
+		2 & DEC $x$ & 3 & 3 \\
+		3 & INC $y$ & 4 & 2 \\
+		4 & Halt & 4 & 4\\
+	\end{tabular}
+\caption{Norma addition truth table}
+\label{tab:add}
+\end{table}
+
+\section{Addition execution trace}
+
+Running code of Table~\vref{tab:add} if `Init' is $x=2$, $y=1$ can be seen in Table~\vref{tab:trace}.
+
+\begin{table}
+	\centering
+	\begin{tabular}{@{}llll@{}}
+Step&State& x&y
+\\\midrule
+0   & Init  &2&1\\
+1   & $x > 0$ and not $x == 0$&2&1\\
+2   & DEC $x$ &1&1\\
+3   & INC $y$ &1&2\\
+4   & $x > 0$ and not $x == 0$ &1&2\\
+5   & DEC $x$ &0&2\\
+6   & INC $y$ &0&3\\
+7   & $x == 0$ and not $x > 0$&0&3\\
+8   & Halt  &0&3\\
+	\end{tabular}
+\caption{Norma addition execution trace}
+\label{tab:trace}
+\end{table}
+
+\section{Introduction}
+
+Turing SDS can do anything NORMA2 can do.
+NORMA2 has been proven Turing complete.
+It runs similarly to standard SDS, I can even use diffusion phase and test phase functions from my library.
+The differences lay in the microtests, and random hypothesis function.
+
+\subsection{New Hypotheses}
+New hypotheses are generated thus, poll a random agent.
+
+If that agent is not active then assume the hypothesis of the initial state. As follows:
+\begin{description}
+\item[previous $x$]= \texttt{null}
+\item[previous $y$]= \texttt{null}
+\item[previous state]= \texttt{null}
+\item[current $x$]= (Something hardcoded) e.g. 2
+\item[current $y$]= (Something hardcoded) e.g. 3
+\item[current state]= 1
+\end{description}
+
+If the polled agent is active initialise your ``previous'' values with their ``current'' values. Make new $x$ and $y$ values by taking their ``current'' $x$ and $y$ values and apply one of the operations {no change, inc $x$, inc $y$, dec $x$, dec $y$\}, assume the ``current state'' by looking at the truth table for the polled agents ``current state'' and taking either the next state from the ``$x$ equals zero'' column, or the ``$x$ greater than zero'' column. Return your new hypothesis.
+
+
+\subsection{Microtests}
+There is one microtest, it takes a hypothesis and returns True if the register values are valid and the selected state is valid.
+
+Registers are valid if the difference between your hypothesised ``previous $x$ and $y$'' and your hypothesised ``current $x$ and $y$'' is the difference expected from the action at your hypothesised ``current state''.
+
+The state is valid if the ``previous $x$'' is \texttt{null} (i.e. this is the initial state) or if ``previous $x$'' was equal to zero and the hypothesised ``current state'' is the state to transition into when the ``previous state'' had $x$ equal to zero, or if ``previous $x$'' was greater than zero and the hypothesised ``current state'' is the state to transition into when the ``previous state'' had $x$ greater than zero.
+
+\subsection{Data structures}
+<<data structures>>=
+Truth = namedtuple('Truth',('state_num','action','xeq0','xgt0'))
+State = namedtuple('State',('state','x','y'))
+Hypothesis = namedtuple('Hypothesis',('previous','current'))
+@
+
+\subsection{NORMA2 Operations}
+The variables [[px]] and [[py]] refer to hypothesised previous register values, and [[x]] and [[y]] refer to hypothesised current register values. The operations of NORMA2 are thus defined.
+<<norma2 operations>>=
+inc_x = lambda px,py,x,y: x == px+1 and y == py
+inc_y = lambda px,py,x,y: x == px and y == py+1
+dec_x = lambda px,py,x,y: x == px-1 and y == py
+dec_y = lambda px,py,x,y: x == px and y == py-1
+init = lambda px,py,x,y: px is None and py is None
+halt = lambda px,py,x,y: x == px and y == py
+xgt0 = lambda px,py,x,y: x == px and y == py and x > 0
+xeq0 = lambda px,py,x,y: x == px and y == py and x == 0
+true = lambda hyp: True
+hypxgt0 = lambda hyp: hyp.x > 0
+hypxeq0 = lambda hyp: hyp.x == 0
+
+actions = {
+	'inc x':true,
+	'inc y':true,
+	'dec x':true,
+	'dec y':true,
+	'init':true,
+	'halt':true,
+	'x>0':hypxgt0,
+	'x=0':hypxeq0,
+}
+@
+
+\subsection{Truth table in python}
+<<addition truth table>>=
+# Truth table for '2x + y'
+truth_table = {
+	1:Truth(state_num=1, action=init,  xeq0=5, xgt0=2),
+	2:Truth(state_num=2, action=dec_x, xeq0=3, xgt0=3),
+	3:Truth(state_num=3, action=inc_y, xeq0=4, xgt0=4),
+	4:Truth(state_num=4, action=inc_y, xeq0=5, xgt0=2),
+	5:Truth(state_num=5, action=halt,  xeq0=5, xgt0=5),
+}
+
+# Truth table for 'Add x + y'
+#truth_table = {
+#	1:Truth(state_num=1, action=init,  xeq0=4, xgt0=2),
+#	2:Truth(state_num=2, action=dec_x, xeq0=3, xgt0=3),
+#	3:Truth(state_num=3, action=inc_y, xeq0=4, xgt0=2),
+#	4:Truth(state_num=4, action=halt,  xeq0=4, xgt0=4),
+#}
+@
+
+<<imports>>=
+from collections import namedtuple
+@
+
+\subsection{Random hypothesis function}
+<<random hypothesis function>>=
+def random_hypothesis_function(random, swarm, initial_state):
+
+	polled_agent = random.choice(swarm)
+
+	if polled_agent.active:
+
+		old_hyp = polled_agent.hypothesis.current
+
+		peturbation = random.choice((
+			lambda x,y: (x,y),
+			lambda x,y: (x+1,y),
+			lambda x,y: (x-1,y),
+			lambda x,y: (x,y+1),
+			lambda x,y: (x,y-1),),)
+
+		new_x,new_y = peturbation(old_hyp.x,old_hyp.y)
+
+		old_state = truth_table[old_hyp.state]
+
+		new_state = random.choice( (old_state.xeq0, old_state.xgt0,) )
+
+		new_hyp = Hypothesis(
+			current=State(state=new_state,x=new_x,y=new_y),
+			previous=State(
+				state=old_hyp.state,
+				x=old_hyp.x,
+				y=old_hyp.y),)
+
+	else:
+
+		new_hyp = Hypothesis(
+			current=initial_state,
+			previous=State(state=None,x=None,y=None)
+		)
+
+	return new_hyp
+@
+
+<<imports>>=
+import random
+@
+
+\subsection{Microtests}
+<<microtests>>=
+def microtest(h):
+
+	previous = h.previous
+	current = h.current
+
+	action = truth_table[current.state].action
+	prev_truth = truth_table.get(previous.state)
+
+	registers_are_valid = action(
+		previous.x,
+		previous.y,
+		current.x,
+		current.y,)
+
+	state_is_valid = (
+		previous.x is None
+		or ((previous.x == 0) and (prev_truth.xeq0 == current.state))
+		or ((previous.x > 0) and (prev_truth.xgt0 == current.state))
+	)
+
+	return registers_are_valid and state_is_valid
+
+microtests = [
+	microtest
+]
+@
+
+\subsection{Execution}
+
+This uses context sensitive diffusion, when I diffused the swarm asynchronously convergence appeared to happen about twice as fast.
+
+There is an interesting complication here, in very long traces, there will be more and more active agents maintaining the past states. This will slow execution down as the probability of an inactive agent selecting an agent at the most advanced state will decrease.
+
+However, in swarms with only one agent, they may select themself in the context-sensitive part of diffusion, and hence collapse the cluster.
+
+<<run turing sds>>=
+def run_turing_sds(swarm, max_iterations):
+
+	new_hyp_func = functools.partial(
+		random_hypothesis_function,
+		swarm=swarm,
+		initial_state=State(state=1,x=6,y=3),
+	)
+
+	for iteration in range(max_iterations):
+		print(iteration)
+
+		sds.context_sensitive_diffusion(swarm, random, new_hyp_func)
+
+		sds.test_phase(swarm, microtests, random)
+
+		for agent in swarm:
+
+			if agent.active:
+
+				agent_state = truth_table[agent.hypothesis.current.state]
+
+				if agent_state.action is halt:
+
+					success = agent
+
+					print(
+						'At iteration',iteration,
+						' y :=',success.hypothesis.current.y)
+					return
+@
+
+<<imports>>=
+import functools
+@
+
+\section{Multiple swarm Turing SDS}
+
+If each swarm represented one of the five operations then we can have a multiple swarm option.
+
+This will need to address the problem of either:
+\begin{enumerate}
+\item Multiple simultaneous clusters in the same swarm, representing the different times execution passes through the same block.
+\item Inhibiting past activity so only one cluster will be active at any one time.
+\end{enumerate}
+
+I can solve the inhibition problem by setting inactive any agent that has its hypothesis diffused into another swarm.
+I would have to ensure the initial swarm doesn't just recover instantly to full activity else the inhibition effect will be lost.
+Therefore I could initialise the first swarm with some agents, and just have them stay active, but have no method for becoming active if ever deactivated.
+This is then very much like an individual agent moving.
+There might also not be much point in having anything other than a single agent.
+
+If I use context sensitive then I run the risk of each subsequent state having a fraction of the activity of the previous state. So the ``multiple simultaneous swarms'' capability of context-sensitive SDS is a non starter.
+
+Let's just try it. CS will do enough, maybe even CF.
+
+So I need one of each type of swarm and then a way to link them up.
+
+\section{Explanation}
+
+So here's how Multiple-swarm Turing SDS works. There are eight types of swarm, Init, Inc $y$, Dec $y$, Inc $x$, Dec $x$ and Halt. Each swarm can read from one or more swarms.
+
+Execution is as Standard SDS, except that diffusion is context-sensitive.
+
+\subsection{Turing Swarm class}
+<<turing swarm class>>=
+XY = namedtuple('XY',('x','y'))
+
+class TuringSwarm:
+
+	def __init__(self, agent_count, linked_swarms):
+
+		self.agents = sds.Agent.initialise(agent_count)
+
+		for agent in self.agents:
+
+			agent.hypothesis = None
+
+		self.link(linked_swarms)
+
+
+	def link(self, linked_swarms):
+
+		self.linked_swarms = linked_swarms
+
+		self.new_hyp_fun = functools.partial(
+			generic_new_hyp_function,
+			linked_swarms=self.linked_swarms,
+			peturbation=self.peturbation[0],
+		)
+
+		self.microtest = [
+			functools.partial(
+				generic_microtest,
+				action=actions[self.action],
+				linked_swarms=self.linked_swarms
+			)
+		]
+
+	def iterate(self):
+
+		sds.context_sensitive_diffusion(
+			self.agents,
+			random,
+			self.new_hyp_fun,)
+
+		sds.test_phase(
+			swarm=self.agents,
+			microtests=self.microtest,
+			random=random,)
+@
+
+\subsection{Turing random hypothesis function}
+<<turing class generic new hyp function>>=
+def generic_new_hyp_function(random, linked_swarms, peturbation):
+
+	#polled_agent = random.choice(random.choice(linked_swarms).agents)
+	polled_swarm = random.choice(linked_swarms)
+
+	polled_agent = random.choice(polled_swarm.agents)
+
+	if polled_agent.active:
+
+		polled_hyp = polled_agent.hypothesis
+
+		new_x,new_y = peturbation(polled_hyp.x, polled_hyp.y)
+
+		new_hyp = XY(new_x,new_y)
+
+	else:
+
+		new_hyp = None
+
+	return new_hyp
+@
+
+\subsection{Turing microtest}
+
+Each TuringSwarm should have a specific version of this function, with its own action function.
+
+<<turing class generic microtest>>=
+def generic_microtest(hyp, action, linked_swarms):
+
+	if hyp is None:
+
+		return False
+
+	else:
+
+		return action(hyp)
+
+	polled_swarm = random.choice(linked_swarms)
+
+	polled_agent = random.choice(polled_swarm.agents)
+
+	if polled_agent.active:
+
+		polled_hyp = polled_agent.hypothesis
+
+		return action(polled_hyp.x, polled_hyp.y, hyp.x, hyp.y)
+
+	else:
+
+		return False
+@
+
+\subsection{Turing classes}
+
+\subsubsection{Init}
+<<init swarm class>>=
+class Init(TuringSwarm):
+
+	#microtest = [lambda hyp: True]
+	microtest = [lambda hyp: random.choice((False,True))]
+
+	linked_swarms = None
+
+	def __init__(self, agent_count, x, y):
+
+		self.agents = sds.Agent.initialise(agent_count)
+
+		for agent in self.agents:
+
+			agent.hypothesis = None
+
+		self.new_hyp_fun = functools.partial(
+			init_rand_hyp_fun,
+			a=x,
+			b=y,
+		)
+
+def init_rand_hyp_fun(rnd, a,  b,):
+
+	return XY(x=a,y=b)
+@
+
+\subsubsection{Inc y}
+<<inc y swarm class>>=
+class IncY(TuringSwarm):
+
+	peturbation=[lambda x,y:(x,y+1)]
+
+	action='inc y'
+@
+
+\subsubsection{Dec y}
+<<dec y swarm class>>=
+class DecY(TuringSwarm):
+
+	peturbation=[lambda x,y:(x,y-1)]
+
+	action='dec y'
+@
+
+\subsubsection{Inc x}
+<<inc x swarm class>>=
+class IncX(TuringSwarm):
+
+	peturbation=[lambda x,y:(x+1,y)]
+
+	action='inc x'
+@
+
+\subsubsection{Dec x}
+<<dec x swarm class>>=
+class DecX(TuringSwarm):
+
+	peturbation=[lambda x,y:(x-1,y)]
+
+	action='dec x'
+@
+
+\subsubsection{Halt swarm}
+<<halt swarm class>>=
+class Halt(TuringSwarm):
+
+	peturbation=[lambda x,y:(x,y)]
+
+	action='halt'
+@
+
+\subsubsection{$x > 0$ swarm}
+<<xgt0 swarm class>>=
+class XGT0(TuringSwarm):
+
+	peturbation=[lambda x,y:(x,y)]
+
+	action='x>0'
+@
+
+\subsubsection{$x == 0$ swarm}
+<<xeq0 swarm class>>=
+class XEQ0(TuringSwarm):
+
+	peturbation=[lambda x,y:(x,y)]
+
+	action='x=0'
+@
+
+\subsection{Run multiple swarms}
+<<run multiple swarms>>=
+def run_multiple_swarms():
+	agent_count = 5
+	#start = Init(agent_count, 2, 1)
+	#a = IncY(agent_count, [start])
+	#b = IncX(agent_count, [a])
+	#c = DecY(agent_count, [b])
+	#d = DecX(agent_count, [c])
+	#swarms = [start, a, b, c, d]
+	#swarm_names = ('start', 'a', 'b', 'c', 'd')
+
+	#a = Init(agent_count, 1, 1)
+	#b = DecX(agent_count, [a])
+	#xeq0a = XEQ0(agent_count, [a])
+	#xgt0a = XGT0(agent_count, [a])
+	#xeq0b = XEQ0(agent_count, [b])
+	#xgt0b = XGT0(agent_count, [b])
+	#swarms = (a,b,xeq0a,xgt0a,xeq0b,xgt0b)
+	#swarm_names = ('a','b','a x==0', 'a x>0', 'b x==0','b x>0')
+
+	#swarm_names = ('a','b','c','d','e','f')
+
+	all_animation = []
+	repeat_count = 1
+	max_iterations = 40000
+	iterations = []
+	for repeat in range(repeat_count):
+		repeat_animation = []
+		a = Init(agent_count, 8, 2)
+		d = IncY(agent_count, None)
+		b = XGT0(agent_count, [a,d])
+		c = DecX(agent_count, [b])
+		e = XEQ0(agent_count, [a,d])
+		f = Halt(agent_count, [e])
+		d.link([c])
+		swarms = (
+			('(A) init',a),
+			('(B) x>0',b),
+			('(C) DecX',c),
+			('(D) IncY',d),
+			('(E) x==0',e),
+			('(F) Halt',f),
+		)
+		for name, swarm in swarms:
+			print(name,swarm.linked_swarms)
+
+		complete = False
+		timeout = 10
+
+		for iteration in range(max_iterations):
+			iteration_animation = []
+			print(iteration)
+			#print('active count in init',sum(1 for agent in a.agents if agent.active))
+			#print('agents in init',[(agent.active,agent.hypothesis) for agent in a.agents])
+			#for name, swarm in swarms:
+			#	print('agents in',name,[(agent.active,agent.hypothesis) for agent in swarm.agents])
+
+			# 0 = random swarm, diffuse then test
+			# 1 = diffuse all swarms, test all swarms
+			# 2 = for each swarm in turn, diffuse then test
+			async = 1
+
+			if async == 0:
+				name, swarm = random.choice(swarms)
+				sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+				for agent in swarm.agents:
+					if not agent.active:
+						agent.active = swarm.microtest[0](agent.hypothesis)
+			elif async == 1:
+				for name, swarm in swarms:
+					if False and name == '(A) init':
+						sds.passive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+					else:
+						sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+					#print(name,[(agent.active,agent.hypothesis) for agent in swarm.agents])
+				for name, swarm in swarms:
+					for agent in swarm.agents:
+						if not agent.active:
+							agent.active = swarm.microtest[0](agent.hypothesis)
+					#print(name,[(agent.active,agent.hypothesis) for agent in swarm.agents])
+				for swarm_num, (name, swarm) in enumerate(swarms):
+					iteration_animation.append(
+						{
+							"swarm name":name,
+							"num":swarm_num,
+							"hypotheses":[(agent.active,agent.hypothesis) for agent in swarm.agents]
+						}
+					)
+				repeat_animation.append(('iteration',iteration,iteration_animation))
+			else:
+				for name, swarm in swarms:
+					sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+					for agent in swarm.agents:
+						if not agent.active:
+							agent.active = swarm.microtest[0](agent.hypothesis)
+			#print('active count in init',sum(1 for agent in a.agents if agent.active))
+			clusters = sds.count_clusters(f.agents)
+			if clusters:
+				if clusters.most_common(1)[0][1] == agent_count:
+					timeout = 0
+				print('Halted after {i} iterations. Output is {answer}.'.format(
+					i=iteration,
+					answer=clusters.most_common(1)[0][0].y
+				))
+				complete = True
+
+			#for name, swarm in swarms:
+			#	#sds.test_phase(swarm=swarm.agents, microtests=swarm.microtest, random=random)
+			#	clusters = sds.count_clusters(swarm.agents)
+			#	if isinstance(swarm, Halt) and clusters:
+			#		print('Halted. Output is {answer}.'.format(
+			#			answer=clusters.most_common(1)[0][0].current.y
+			#		))
+			#		complete = True
+			if complete:
+				timeout = timeout - 1
+				if timeout <= 0:
+					break
+		else:
+			print('maximum time reached')
+			raise ValueError("choose different values")
+
+		iterations.append(iteration)
+
+		all_animation.append(('repeat',repeat,repeat_animation))
+
+
+	for name, swarm in swarms:
+		print(name, sds.count_clusters(swarm.agents))
+
+	print(iterations,sum(iterations)/repeat_count)
+	with open('/tmp/stdout.txt','w') as file:
+		file.write(str(iterations)+' '+str(sum(iterations)/repeat_count)+'\n')
+
+	print(json.dumps(all_animation))
+	with open('json_animation.json','w') as file:
+		json.dump(all_animation,file)
+@
+
+So with this truth table...[[
+	a = Init(x, y)
+	d = IncY([c])
+	b = XGT0([a, d])
+	c = DecX([b])
+	e = XEQ0([a, d])
+	f = Halt([e])
+]] execution takes this long for these initial values of $x$ and $y$ (See Table~\vref{tab:halttime}).
+
+% \usepackage{booktabs}
+\begin{table}
+	\centering
+	\begin{tabular}{@{}rrrrl@{}}
+		%\toprule{}
+		x&y&time&repeats&overflows\\
+		\midrule
+		0  &    5 &  17.35 & 1000 &      \\
+		0  &  500 &  18.28 & 1000 &      \\
+		0  &  500 &  17.37 & 1000 &      \\
+		1  &  500 &  33.21 & 1000 &      \\
+		1  &  500 &  36.77 & 1000 &      \\
+		2  &  500 &  58.42 & 1000 &      \\
+		3  &  500 &  92.21 & 1000 &      \\
+		4  &  500 & 132.52 & 1000 &      \\
+		5  &  500 & 195.98 & 1000 &      \\
+		6  &  500 & 297.07 & 1000 &      \\
+		7  &  500 & 416.68 & 1000 &      \\
+		%8  &  500 & 508.68 & 1000 & 1000 \\
+		%8  &  500 & 521.17 & 1000 & 1000 \\
+		8  &  500 & 507.63 & 1000 &      \\
+		8  &  500 & 530.87 & 1000 &      \\
+		9  &  500 & 614.25 & 1000 &      \\
+		10 &  500 & 841.84 & 1000 &      \\
+		%\bottomrule{}
+	\end{tabular}
+\caption{Time to halt doing addition in ``async'' Multi-swarm Turing SDS}
+\label{tab:halttime}
+\end{table}
+
+\begin{figure}
+\includegraphics[width=\linewidth]{logtime}
+\caption{A pretty much logarithmic increase in execution time. $x$ axis is the initial value of the X register.}
+\end{figure}
+
+\subsection{Print Turing clusters function}
+<<print turing clusters function>>=
+def print_turing_clusters(clusters):
+	cluster_strs = []
+	for hyp, count in clusters.most_common():
+		cluster_str = "(x={x},y={y}): {count:2}".format(
+			x=hyp.current.x,
+			y=hyp.current.y,
+			count=count,
+		)
+		cluster_strs.append(cluster_str)
+	return ", ".join(cluster_strs)
+
+@
+
+\section{Infrastructure}
+
+\subsection{Execution test}
+<<test>>=
+def test():
+	swarm = sds.Agent.initialise(100)
+	run_turing_sds(swarm, max_iterations=100000)
+
+do_single_swarm_test = False
+if do_single_swarm_test:
+	test()
+
+do_multiple_swarm_test = True
+if do_multiple_swarm_test:
+	run_multiple_swarms()
+@
+
+<<imports>>=
+import sds
+import json
+from pprint import pprint
+@
+
+\subsection{Script}
+<<*>>=
+<<imports>>
+<<data structures>>
+<<norma2 operations>>
+<<addition truth table>>
+<<random hypothesis function>>
+<<microtests>>
+<<run turing sds>>
+<<turing class generic new hyp function>>
+<<turing class generic microtest>>
+<<turing swarm class>>
+<<init swarm class>>
+<<inc y swarm class>>
+<<dec y swarm class>>
+<<inc x swarm class>>
+<<dec x swarm class>>
+<<halt swarm class>>
+<<xgt0 swarm class>>
+<<xeq0 swarm class>>
+<<print turing clusters function>>
+<<run multiple swarms>>
+<<test>>
+@
+
+\section{NESTOR}
+
+Forget it, we need to sort out the talk first.
+
+I've read morey1999parallel and it's incomplete, it has some discussion on hardware implementation but I'd be very surprised if it isn't obsolete.
+
+I've read morey2000implementation and it's just an abstract.
+
+I've read nasuto1998neural, but it's just some slides. No meat that isn't available in nasuto2009communicating.
+
+I've read de2000attention, but it just states that NESTOR can be used for string search.
+
+I can't find ``Nasuto, S.J., Bishop, J.M.: Bivariate Processing with Spiking Neuron Stochastic Diffusion Search Network. Neural Processing Letters (at review).''
+
+I've read nasuto1999communication.
+
+I've read de2000explorations but got nothing out of it.
+
+I've read bishop2002dynamic but got nothing.
+
+I've read bishop1999communicating but got nothing.
+
+I've read nasuto1998multiple, but it's an abstract.
+
+\section{Presentation}
+
+What I need is something that will make explaining this to people easier.
+
+I think a diagrammatic representation of the following:
+\begin{enumerate}
+\item An agent generating the initial hypothesis
+\item An agent polling an inactive agent in the previous swarm
+\item An agent polling an active agent in the previous swarm
+\item An agent failing their test with a bad hypothesis
+\item An agent passing their test with a good hypothesis
+\item An agent from a new swarm polling the newly active agent
+\end{enumerate}
+
+\section{New script}
+<<new script>>=
+<<dependencies>>
+<<hypothesis>>
+<<peturbations>>
+<<turing swarm>>
+<<new hypothesis function>>
+<<microtest function>>
+<<turing swarms>>
+<<initialise swarms>>
+<<asynchronous execution>>
+<<synchronous execution>>
+<<action>>
+@
+
+\section{Hypothesis}
+<<hypothesis>>=
+XY = namedtuple('XY',('x','y'))
+@
+
+<<dependencies>>=
+from collections import namedtuple
+@
+
+\section{Peturbations}
+<<peturbations>>=
+noop = lambda xy: xy
+incx = lambda xy: XY(xy.x+1, xy.y)
+decx = lambda xy: XY(max(0,xy.x-1), xy.y)
+incy = lambda xy: XY(xy.x, xy.y+1)
+decy = lambda xy: XY(xy.x, max(0,xy.y-1))
+
+peturbations = (noop, incx, decx, incy, decy)
+@
+
+\section{Turing Swarm}
+<<turing swarm>>=
+class TuringSwarm:
+
+	def __init__(self, agent_count):
+
+		self.agents = sds.Agent.initialise(agent_count)
+
+	def link(self, swarms):
+
+		self.links = swarms
+
+		self.new_hyp_fun = functools.partial(
+			generic_new_hyp_function,
+			linked_swarms=self.links,
+		)
+
+		self.microtest = [
+			functools.partial(
+				generic_microtest,
+				action=self.action,
+				linked_swarms=self.links,
+			)
+		]
+@
+
+<<dependencies>>=
+import sds
+import functools
+@
+
+\section{Generic New Hypothesis Function}
+<<new hypothesis function>>=
+def generic_new_hyp_function(random, linked_swarms):
+
+	polled_swarm = random.choice(linked_swarms)
+
+	polled_agent = random.choice(polled_swarm.agents)
+
+	polled_hypothesis = polled_agent.hypothesis
+
+	random_peturbation = random.choice(peturbations)
+
+	return random_peturbation(polled_hypothesis)
+@
+
+<<dependencies>>=
+import random
+@
+
+\section{Generic Microtest Function}
+
+If you don't require your polled agent to be active, then the initialisation swarm will always be fully active, which dominates the execution.
+
+<<microtest function>>=
+def generic_microtest(hypothesis, action, linked_swarms):
+
+	polled_swarm = random.choice(linked_swarms)
+
+	polled_agent = random.choice(polled_swarm.agents)
+
+	polled_hypothesis = polled_agent.hypothesis
+
+	modified_hypothesis = action(polled_hypothesis)
+
+	return (
+		polled_agent.active
+		and (modified_hypothesis is not None)
+		and (modified_hypothesis == hypothesis)
+	)
+@
+
+\section{Turing Swarm definitions}
+<<turing swarms>>=
+<<init>>
+<<halt>>
+<<xgt0>>
+<<xeq0>>
+<<incx>>
+<<decx>>
+<<incy>>
+<<decy>>
+@
+
+\subsection{Init swarm}
+<<init>>=
+class Init(TuringSwarm):
+
+	def __init__(self, agent_count, initial_hyp):
+
+		super().__init__(agent_count)
+
+		self.new_hyp_fun = lambda random: initial_hyp
+
+		self.microtest = [lambda hyp: hyp == initial_hyp]
+@
+
+\subsection{Halt swarm}
+<<halt>>=
+class Halt(TuringSwarm):
+
+	def action(self, hyp):
+		return noop(hyp)
+@
+
+\subsection{$X > 0$ swarm}
+<<xgt0>>=
+class XGt0(TuringSwarm):
+
+	def action(self, hyp):
+		if hyp.x > 0:
+			return hyp
+		else:
+			return None
+@
+
+\subsection{$X = 0$ swarm}
+<<xeq0>>=
+class XEq0(TuringSwarm):
+
+	def action(self, hyp):
+		if hyp.x == 0:
+			return hyp
+		else:
+			return None
+@
+
+\subsection{Inc X swarm}
+<<incx>>=
+class IncX(TuringSwarm):
+
+	def action(self, hyp):
+		return incx(hyp)
+@
+
+\subsection{Dec X swarm}
+<<decx>>=
+class DecX(TuringSwarm):
+
+	def action(self, hyp):
+		return decx(hyp)
+@
+
+\subsection{Inc Y swarm}
+<<incy>>=
+class IncY(TuringSwarm):
+
+	def action(self, hyp):
+		return incy(hyp)
+@
+
+\subsection{Dec Y swarm}
+<<decy>>=
+class DecY(TuringSwarm):
+
+	def action(self, hyp):
+		return decy(hyp)
+@
+
+\section{Initialise swarms}
+<<initialise swarms>>=
+def initialise_swarms(swarms):
+	for swarm in swarms:
+		for agent in swarm.agents:
+			agent.hypothesis = XY(
+				x=random.randint(0,9),
+				y=random.randint(0,9),)
+@
+
+\section{Asynchronous Execution}
+<<asynchronous execution>>=
+def asynchronous_execution(swarms, max_iterations):
+
+	swarm_names = ('init','X>0','decX','incY','X==0','halt')
+
+	named_swarms = list(zip(swarm_names,swarms))
+
+	for iteration in range(max_iterations):
+
+		for name, swarm in random.sample(named_swarms,len(named_swarms)):
+
+			sds.passive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+
+			sds.test_phase(swarm.agents, swarm.microtest, random)
+
+		active_counts = [
+			Counter(tuple(agent.hypothesis) for agent in swarm.agents if agent.active).most_common(2)
+			for swarm
+			in swarms
+		]
+
+		print("{x:2}".format(x=iteration+1), list(zip(swarm_names,active_counts)))
+@
+
+\section{Synchronous Execution}
+<<synchronous execution>>=
+def synchronous_execution(swarms, max_iterations):
+
+	swarm_names = ('init','X>0','decX','incY','X==0','halt')
+
+	for iteration in range(max_iterations):
+
+		#sds.passive_diffusion(swarms[0].agents, random, swarms[0].new_hyp_fun)
+		#for swarm in swarms[1:]:
+		#	sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+
+		for swarm in swarms:
+			sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
+
+		for swarm in swarms:
+
+			sds.test_phase(swarm.agents, swarm.microtest, random)
+
+		#active_counts = [
+		#	sum(1 for agent in swarm.agents if agent.active)
+		#	for swarm
+		#	in swarms]
+
+		active_counts = [
+			Counter(tuple(agent.hypothesis) for agent in swarm.agents if agent.active).most_common(2)
+			for swarm
+			in swarms
+		]
+
+		print("{x:2}".format(x=iteration+1), list(zip(swarm_names,active_counts)))
+		#print("{x:2}".format(x=iteration+1), 'x>0',active_counts[1])
+		#print("{x:2}".format(x=iteration+1), )
+@
+
+<<dependencies>>=
+from pprint import pprint
+from collections import Counter
+@
+
+\section{Action}
+<<action>>=
+my_init = Init(agent_count=100, initial_hyp=XY(2,3))
+my_xgt0 = XGt0(agent_count=100)
+my_xeq0 = XEq0(agent_count=100)
+my_halt = Halt(agent_count=100)
+my_decx = DecX(agent_count=100)
+my_incy = IncY(agent_count=100)
+
+my_xgt0.link((my_init, my_incy))
+my_xeq0.link((my_init, my_incy))
+my_halt.link((my_xeq0,))
+my_decx.link((my_xgt0,))
+my_incy.link((my_decx,))
+
+swarms = [ my_init, my_xgt0, my_decx, my_incy, my_xeq0, my_halt]
+
+initialise_swarms(swarms)
+
+#print(my_init.microtest(XY(2,3)))
+#print(my_init.microtest(XY(0,0)))
+#print(my_init.new_hyp_fun(random))
+synchronous_execution(swarms,max_iterations=500)
+print('Done')
+@
+
+\appendix{}
+
+\section{Index}
+
+\nowebindex{}
+
+\section{Code Chunks}
+
+\nowebchunks{}
+
+\end{document}
+

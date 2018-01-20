@@ -14,10 +14,16 @@ turing_sds.pdf: turing_sds.tex
 
 doc: turing_sds.pdf
 
-turing_sds.py: turing_sds.nw
-	notangle turing_sds.nw -R"new script" | cpif turing_sds.py
+#turing_sds.py: turing_sds.nw
+#	notangle turing_sds.nw -R"new script" | cpif turing_sds.py
 
-code: turing_sds.py
+turing_sds_original.py: turing_sds_original.nw
+	notangle -t4 -filter btdefn turing_sds_original.nw | cpif turing_sds_original.py
+
+%.py: turing_sds.nw
+	notangle -t4 -R"$(subst _,-,$@)" -filter btdefn turing_sds.nw | cpif $@
+
+code: hypothesise_transition.py
 
 run: turing_sds.py
 	~/virtualenvs/thesis/bin/ipython turing_sds.py
