@@ -288,6 +288,7 @@ Let's start off with some imports.
 import random
 import sds
 from collections import namedtuple
+import functools
 
 Step = namedtuple('Step',['x','y','state'])
 
@@ -324,13 +325,10 @@ This action has to be considered carefully as it must be the case that this swar
 
 <<>>=
 for agent in swarms['init']['agents']:
-	agent.hypothesis = Step(x=1000,y=1000,state=None)
+	agent.hypothesis = Step(x=10,y=10,state=None)
 	agent.active = True
 
-swarms['init']['converged'] = False
-
-for num, swarm_name in enumerate(swarm_names,start=1):
-	print(num, swarm_name, swarms[swarm_name])
+swarms['init']['converged'] = True
 @
 
 \subsection{Multi swarm definitions}
@@ -340,9 +338,11 @@ I'll define everything manually, but afterwards I should be able to make a sexy 
 This is for the init swarm.
 <<>>=
 def init_hyp(rng=random):
+	#print('init hyp runs')
 	return Step(x=1000,y=1000,state=None)
 
 def init_test(hyp):
+	#print('init test runs')
 	polled_agent = random.choice(swarms['init']['agents'])
 	#return polled_agent.hypothesis == Step(x=3,y=2,state=None)
 	return polled_agent.active
@@ -488,13 +488,13 @@ def halt_test(hyp):
 
 Here's a data structure to keep it all together.
 <<>>=
-multi_sds = [
-	('init',init_test,init_hyp,[]),
-	('xgt0',xgt0_test,xgt0_hyp,['init','incy']),
-	('decx',decx_test,decx_hyp,['xgt0']),
-	('incy',incy_test,incy_hyp,['decx']),
-	('xeq0',xeq0_test,xeq0_hyp,['init','incy']),
-	('halt',halt_test,halt_hyp,['xeq0']),
+solution = [
+	['init',swarms['init'],init_test,init_hyp,[]],
+	['xgt0',swarms['xgt0'],xgt0_test,xgt0_hyp,['init','incy']],
+	['decx',swarms['decx'],decx_test,decx_hyp,['xgt0']],
+	['incy',swarms['incy'],incy_test,incy_hyp,['decx']],
+	['xeq0',swarms['xeq0'],xeq0_test,xeq0_hyp,['init','incy']],
+	['halt',swarms['halt'],halt_test,halt_hyp,['xeq0']],
 ]
 @
 
@@ -505,13 +505,13 @@ def fully_active(swarm):
 	result = all(x.active for x in swarm)
 	return result
 
-def iterate():
-	for swarm_name, microtest, hyp_function, previous_swarms in multi_sds:
-		if not swarms[swarm_name]['converged']:
+def iterate(solution):
+	for swarm_name, swarm, microtest, hyp_function, previous_swarms in solution:
+		if not swarm['converged']:
 			#print('processing',swarm_name)
 			# if swarm is not converged
 			sds.run(
-				swarm=swarms[swarm_name]['agents'],
+				swarm=swarm['agents'],
 				microtests=[microtest],
 				random_hypothesis_function=hyp_function,
 				max_iterations=100,
@@ -519,30 +519,217 @@ def iterate():
 				halting_iterations=10,
 				report_iterations=None,
 			)
-			if not all(agent.active for agent in swarms[swarm_name]['agents']):
+			if not all(agent.active for agent in swarm['agents']):
 				#raise RuntimeError('I thought it would all be active by now')
 				#print(swarm_name,"didn't converge")
 				pass
 			else:
-				swarms[swarm_name]['converged'] = True
-				print(swarm_name,'is now converged at',swarms[swarm_name]['agents'][0].hypothesis)
+				swarm['converged'] = True
+				print(swarm_name,'is now converged at',swarm['agents'][0].hypothesis)
 				if swarm_name == 'halt':
 					print('convergence in the halt swarm halts the process')
 					return True
-				for prev_swarm_name in previous_swarms:
-					if swarms[prev_swarm_name]['converged']:
-						swarms[prev_swarm_name]['converged'] = False
-						print(prev_swarm_name,'is no longer converged')
-						for agent in swarms[prev_swarm_name]['agents']:
-							agent.active = False
-							agent.hypothesis = 'butt'
+				for swarm_name, swarm, _, _, _ in solution:
+					for prev_swarm_name in previous_swarms:
+						if prev_swarm_name == swarm_name:
+							if swarm['converged']:
+								swarm['converged'] = False
+								print(prev_swarm_name,'is no longer converged')
+								for agent in swarm['agents']:
+									agent.active = False
+									agent.hypothesis = None
+
+	#print('not halted yet')
 	return False
 
-halted = iterate()
-while not halted:
-	halted = iterate()
+do_naive_multiswarm_solution = False
+if do_naive_multiswarm_solution:
 
-print('done. Answer is',swarms['halt']['agents'][0].hypothesis.y)
+	for num, swarm_name in enumerate(swarm_names,start=1):
+		print(num, swarm_name, swarms[swarm_name])
+
+	while True:
+		if iterate(solution):
+			print('halted properly')
+			break
+
+	print('done. Answer is',swarms['halt']['agents'][0].hypothesis.y)
+@
+
+\section{Multi swarm solution with functional programming}
+
+I'll carry on editing the same file as there will be a lot of code sharing.
+
+I need to make some 'intended action' functions to save me typing five different sets of logic.
+
+<<>>=
+def decrementX(hyp):
+	hyp_x, hyp_y, _ = hyp
+	return Step(hyp_x-1, hyp_y, None)
+
+def decrementY(hyp):
+	hyp_x, hyp_y, _ = hyp
+	return Step(hyp_x, hyp_y-1, None)
+
+def incrementX(hyp):
+	hyp_x, hyp_y, _ = hyp
+	return Step(hyp_x+1, hyp_y, None)
+
+def incrementY(hyp):
+	hyp_x, hyp_y, _ = hyp
+	return Step(hyp_x, hyp_y+1, None)
+
+def noop(hyp):
+	hyp_x, hyp_y, _ = hyp
+	return Step(hyp_x, hyp_y, None)
+
+def Xeq0(x):
+	return x == 0
+
+def Xgt0(x):
+	return x > 0
+
+def Xdontcare(x):
+	return True
+@
+
+This is a function to make all the test function for all the swarms.
+
+<<>>=
+def make_test_fun(swarms, linked_swarms,action,x_condition,rng=random):
+	def generic_test_fun(
+		swarms, 
+		previous_swarm_names,
+		intended_action_function,
+		x_condition_function,
+		rng,
+		hyp,
+	):
+		for swarm_name in previous_swarm_names:
+			if swarms[swarm_name]['converged']:
+				polled_agent = rng.choice(swarms[swarm_name]['agents'])
+				break
+		else:
+			return False
+		if polled_agent.active:
+			polled_x, polled_y, _ = intended_action_function(polled_agent.hypothesis)
+			return (
+				hyp.x == polled_x
+				and hyp.y == polled_y
+				and x_condition_function(hyp.x))
+		else:
+			raise RuntimeError('inactive agent polled')
+
+	return functools.partial(generic_test_fun,swarms,linked_swarms,action,x_condition,rng)
+
+#foo = make_hyp_fun(linked_swarms=['init','incy'],action=noop,x_condition=Xgt0)
+@
+
+This is a function to make all the hyp functions for all the swarms.
+
+<<>>=
+def make_hyp_fun(swarms, linked_swarms):
+	def generic_hyp_fun(swarms, linked_swarms,rng=random):
+		for swarm_name in linked_swarms:
+			if swarms[swarm_name]['converged']:
+				polled = rng.choice(swarms[swarm_name]['agents'])
+				polled_x, polled_y, polled_state = polled.hypothesis
+				return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+		else:
+			return Step(x=0,y=0,state=None)
+	return functools.partial(generic_hyp_fun, swarms, linked_swarms)
+@
+
+Here's are the functions to make the building blocks.
+
+<<>>=
+swarm_types = {
+	'init':(noop,Xdontcare),
+	'xgt0':(noop,Xgt0),
+	'xeq0':(noop,Xeq0),
+	'incy':(incrementY,Xdontcare),
+	'decy':(decrementY,Xdontcare),
+	'incx':(incrementX,Xdontcare),
+	'decx':(decrementX,Xdontcare),
+	'halt':(noop,Xdontcare),
+}
+@
+
+Which can be used with a state table.
+
+<<>>=
+state_table = [
+	('A-init','init',['A-init']),
+	('B-xgt0','xgt0',['A-init','D-incy']),
+	('C-decx','decx',['B-xgt0']),
+	('D-incy','incy',['C-decx']),
+	('E-xeq0','xeq0',['A-init','D-incy']),
+	('halt','halt',['E-xeq0']),
+]
+@
+
+Now let's try to build a multi swarm solution from the table.
+
+<<>>=
+def build_solution(state_table,initial_x,initial_y):
+	swarms = {
+		name: {
+			'converged': False,
+			'agents': [sds.Agent() for _ in range(agent_count)]
+		}
+		for name, swarm_type, linked_swarms in state_table
+	}
+
+	solution = []
+
+	for name, swarm_type, linked_swarms in state_table:
+
+		if swarm_type == 'init':
+			swarm = swarms[name]
+			for agent in swarm['agents']:
+				agent.hypothesis = Step(x=initial_x,y=initial_y,state=None)
+				agent.active = True
+			swarm['converged'] = True
+
+		action, x_condition = swarm_types[swarm_type]
+		
+		test_fun = make_test_fun(swarms, linked_swarms,action,x_condition,random)
+		hyp_fun = make_hyp_fun(swarms, linked_swarms)
+
+		solution.append((name,swarms[name],test_fun, hyp_fun, linked_swarms))
+
+	return solution
+@
+
+<<>>=
+do_functional_multiswarm_solution = True
+if do_functional_multiswarm_solution:
+
+	functional_solution = build_solution(state_table,initial_x=1000,initial_y=1000)
+
+	while True:
+		if iterate(functional_solution):
+			break
+
+	_,halt_swarm,_,_,_ = next(x for x in functional_solution if x[0] == 'halt')
+	answer = halt_swarm['agents'][0].hypothesis.y
+	print('Answer is',answer)
+	#print('done. Answer is',['halt']['agents'][0].hypothesis.y)
+@
+
+<<>>=
+	#solution[0][1] = make_test_fun(['init'],noop,Xdontcare,random)
+	#solution[0][2] = make_hyp_fun(['init'])
+	#solution[1][1] = make_test_fun(['init','incy'],noop,Xgt0,random)
+	#solution[1][2] = make_hyp_fun(['init','incy'])
+	#solution[2][1] = make_test_fun(['xgt0'],decrementX,Xdontcare,random)
+	#solution[2][2] = make_hyp_fun(['xgt0'])
+	#solution[3][1] = make_test_fun(['decx'],incrementY,Xdontcare,random)
+	#solution[3][2] = make_hyp_fun(['decx'])
+	#solution[4][1] = make_test_fun(['init','incy'],noop,Xeq0,random)
+	#solution[4][2] = make_hyp_fun(['init','incy'])
+	#solution[5][1] = make_test_fun(['xeq0'],noop,Xdontcare,random)
+	#solution[5][2] = make_hyp_fun(['xeq0'])
 @
 
 \appendix{}
