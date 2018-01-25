@@ -38,11 +38,530 @@
 \maketitle
 \tableofcontents
 
+\section{Preliminary assumptions}
+
+To go from something like NORMA2 to a new swarmy implementation, we need to know what things we can and cannot change.
+
+Firstly, when designing a NORMA2 program, to perform addition for example, then an intelligent user still needs to determine the procedure themselves. This means we can get away with manually specifying the shape of the program, and should not expect the intended function to emerge without such careful initialisation. Because of this, I will often refer to the state table which defines a NORMA2 machine for addition (Table~\ref{tab:add}); in a properly swarmy system, there will not be an explicit state table, but the emergent behaviour will have to be similar to one, and this will largely have to be the result of manual configuration by a user.
+
+\begin{table}
+	\centering
+	\begin{tabular}{@{}rlcc@{}}
+		State & Action & if $x=0$ goto & if $x>0$ goto
+		\\\midrule
+		1 & Init & 4 & 2 \\
+		2 & DEC $x$ & 3 & 3 \\
+		3 & INC $y$ & 4 & 2 \\
+		4 & Halt & 4 & 4\\
+	\end{tabular}
+\caption{Norma addition truth table}
+\label{tab:add}
+\end{table}
+
+Secondly, NORMA2 was given some registers of unlimited size which is fine in practise, but if I were to implement NORMA2, in Python for example, then I would need to include special routines for times when the value of the registers was larger than could fit into memory. This could be a function which stops the NORMA2 procedure before the register values become too big, and informs the user to go and install more memory into the machine. The point is, that any implementation I can do in a few minutes would not be able to perform certain computations over a certain size. I therefore suggest that we should not expect the swarmy implementation to work for all cases either, though in theory it should.
+
+Lastly, the capabilities of NORMA are incrementing, decrementing, branching, and comparison with zero. We will need either the same set of capabilities, or a similarly expressive set.
+
+With these assumptions in mind, lets consider a few approaches.
+
+\section{Just copy NORMA2}
+
+If I implemented something exactly like NORMA2, then we know for sure that it would work, but we would be criticised for demonstrating something that is neither original or swarmy. So from this basis, what's the minimum change we could do to make a system that would still work, by virtue of its being almost identical to NORMA2, but with some swarmy aspect?
+
+Imagine a swarm of one agent, where their behaviour was entirely determined by the state table. The agent would maintain a state and two register values, and update them according to the states. Again, this would definitely work, but not be sufficciently swarmy, as there is no agent-to-agent interaction, and the behaviour of the agent is explicit and complicated.
+
+So we need more than one agent, is there any way that two agents could be used? Maybe if one agent simply maintained a boolean state depending on whether it held that $x=0$. Then you could have one agent maintaining the registers and state, and branching depending on the state of the other agent. This could also certainly be made to work, but now we have the criticism that the two distinct types of agent makes this more of a multi-agent system rather than a swarm intelligence system.
+
+So could it be done with two identical agents? One would need to maintain a state and the other would have to find the next state. The agent which found the next state would have to deactivate the other agent so the newly inactive agent may find the next state. They would go on leap-frogging each other. Let's see if that's at all viable.
+
+\subsection{Two agent solution}
+
+First we'll import some bits, and define an Agent as something which has an activity and a hypothesis, and a `Step' which defines a state of a computational procedure, representing the value of the X and Y registers and the current state it is in.
+
+<<two-agent-solution.py>>=
+import random
+from collections import namedtuple
+
+Step = namedtuple('Step',['x','y','state'])
+
+class Agent:
+	def __init__(self):
+		self.active = False
+		self.hyp = None
+@
+
+Then we'll define a swarm as two of those agents, and define the function for generating new hypothesis, which in this case returns the initial Step, where $X=2$, $Y=1$, in State 1.
+
+<<two-agent-solution.py>>=
+swarm = tuple(Agent() for _ in range(2))
+
+def initial_hyp():
+	return Step(x=3,y=2,state=1)
+@
+
+Now we need a diffusion phase.
+I've chosen to disallow self-selection, and use standard passive diffusion, and hypothesis transmission error, where the registers have a small chance of being perturbed and the state is chosen entirely random.
+
+I previously had used context-sensitive to ensure both agents wouldn't remain active, but that event never occurs.
+<<two-agent-solution.py>>=
+def diffuse(swarm):
+	for agent_num, agent in enumerate(swarm):
+
+		# No self selection.
+		# The polled agent is always the other agent.
+		other_agent = swarm[(agent_num+1)%2]
+
+		if not agent.active:
+
+			if other_agent.active: # copy hyp noisily
+
+				x, y, state = other_agent.hyp
+
+				if random.random() < 0.3:
+
+					x += random.choice([-1,1])
+
+				if random.random() < 0.3:
+
+					y += random.choice([-1,1])
+
+				agent.hyp = Step(x, y, state=random.randint(1,4))
+
+			else:
+
+				agent.hyp = initial_hyp()	
+@
+
+That all seems fairly safe, I should point out that the randomisation of state in the transmission error will be mitigated if each agent existed within a swarm that defined a single state. To clarify this, rather than a single homogeneous swarm, imagine a swarm of agents in each row of the state table, then each swarm would ``know'' what they were hypothesising as the next state.
+
+But now I need to determine a test phase. It would require checking if the other agent is active and if so, that your hypothesis is a valid transition (see function ``[[is_valid]]'').
+There also needs to be the extra feature that the agents remain active once they've become active, and the surpress the activity of the other agent.
+
+<<two-agent-solution.py>>=
+def test():
+
+	for agent_num, agent in enumerate(swarm):
+
+		# Active agents do nothing, and stay active
+		if not agent.active:
+
+			other_agent = swarm[(agent_num+1)%2]
+
+			if other_agent.active:
+
+				# Check if transition is valid.
+
+				valid = is_valid(agent.hyp, other_agent.hyp)
+
+				agent.active = valid
+
+				if valid:
+
+					other_agent.active = False
+
+			else:
+
+				# Both agents are inactive.
+				# Go active if you have the initial state.
+				# This only runs once.
+
+				agent.active = agent.hyp == initial_hyp()
+@
+
+Here's the [[is_valid]] function, which implements the state table manually.
+
+<<two-agent-solution.py>>=
+def `is_valid(hyp, prev_hyp):
+
+	other_x, other_y, other_state = prev_hyp
+
+	x, y, state = hyp
+
+	if other_state == 1:
+
+		if other_x == 0:
+
+			return x == other_x and y == other_y and state == 4
+
+		else:
+
+			return x == other_x and y == other_y and state == 2
+
+	elif other_state == 2:
+
+		return x == other_x-1 and y == other_y and state == 3
+
+	elif other_state == 3:
+
+		if other_x == 0:
+
+			return x == other_x and y == other_y+1 and state == 4
+
+		else:
+
+			return x == other_x and y == other_y+1 and state == 2
+
+	else: # other_state == 4:
+
+		return False
+@
+
+Now to add a loop that does intialise, test, diffuse and halt. We'll halt when any active agent is in halt state 4.
+
+<<two-agent-solution.py>>=
+def run():
+	# Initialise
+	for agent in swarm:
+		agent.hyp = initial_hyp()
+
+	previously_active_agent = 1
+
+	for iteration in range(1000):
+
+		test()
+
+		diffuse(swarm)
+
+		# Print to console when the inactive agent becomes active.
+		active_agent = [agent.active for agent in swarm].index(True)
+
+		if False or not (active_agent == previously_active_agent):
+
+			print(
+				format(iteration,'4'),
+				[(agent.hyp,agent.active) for agent in swarm],)
+
+			previously_active_agent = active_agent
+
+		# Halting.
+		if any(agent.hyp.state == 4 for agent in swarm if agent.active):
+
+			print(
+				'Answer is',
+				next(
+					agent.hyp
+					for agent
+					in swarm
+					if agent.active and agent.hyp.state == 4).y,
+				'in',iteration,'iterations.')
+
+			break
+	else:
+
+		print('no convergence')
+@
+
+Here's a script to run the two agent solution. It works, but there are some potentially problematic aspects to it.
+
+<<run-two-agent-solution.py>>=
+import two_agent_solution
+
+two_agent_solution.run()
+@
+
+\subsection{Problems with the Two Agent solution}
+
+\begin{enumerate}
+\item The complex logic in the test for validation.
+\item The fact that there are only two agents, there's nothing swarmy.
+\item Only inactive agents perform the test phase.
+\end{enumerate}
+
+\section{Multiple agent solution}
+
+The idea is to have one swarm for every state in the NORMA2 state table, plus two for every unique conditional branch destination.
+
+Each swarm will also have a boolean convergence flag, which is initially false.
+
+Initialisation could be achieved either by setting all the agents in the initial swarm to certain register values, and setting the convergence flag, or setting a single agent active with certain register values and waiting for convergence.
+Agents in the initial swarm will be set active and given register values.
+
+Any swarm which has not converged will be polling connected swarms and diffusing perturbed hypotheses, which it will test as valid by checking that a random agent from the previous swarm is converged and the registers make sense with the polled agents registers.
+
+When a swarm has full activity it sets its convergence flag, inviting activity from the subsequent swarms, and surpresses all activity in previous swarms by switching off its convergence flag. Convergence flags therefore surpress processing.
+
+\subsection{Implementation}
+
+Let's start off with some imports.
+
+<<multi-swarm-solution.py>>=
+import random
+import sds
+from collections import namedtuple
+
+Step = namedtuple('Step',['x','y','state'])
+
+def agent_repr(self):
+	if self.active:
+		return "{h}".format(h=self.hypothesis)
+	else:
+		return "inactive"
+sds.Agent.__repr__ = agent_repr
+@
+
+Now I'll define some swarms, right now I'll just initialise them, I'll link them up later, as its much easier to link an acyclic graph once all nodes have been created.
+
+I'm also including a `converged' flag for each swarm, and rather than just having a raw boolean [['False']], I've made it a boolean in a list [['[False]']] so I can zip the list and have something I can modify in place.
+
+At the end of this chunk `swarms' is a list of \mbox{(swarm name, agent list, converged flag)} tuples.
+
+<<>>=
+agent_count = 5
+swarm_names = ('init','xgt0','decx','incy','xeq0','halt')
+swarms = {
+	swarm_name:	{
+		'converged': False,
+		'agents': [sds.Agent() for _ in range(agent_count)]
+	}
+	for swarm_name
+	in swarm_names
+}
+@
+
+Now initialise all the agent in the first swarm as active at the initial step.
+
+This action has to be considered carefully as it must be the case that this swarm never converges again. Once the convergence flag is on, it will stop processing, once the flag goes off again, there must never be any activity, so activity can't just come from the microtests. I therefore suggest that each agent in the init swarm selects an agent in the init swarm.
+
+<<>>=
+for agent in swarms['init']['agents']:
+	agent.hypothesis = Step(x=1000,y=1000,state=None)
+	agent.active = True
+
+swarms['init']['converged'] = False
+
+for num, swarm_name in enumerate(swarm_names,start=1):
+	print(num, swarm_name, swarms[swarm_name])
+@
+
+\subsection{Multi swarm definitions}
+
+I'll define everything manually, but afterwards I should be able to make a sexy functional programming solution.
+
+This is for the init swarm.
+<<>>=
+def init_hyp(rng=random):
+	return Step(x=1000,y=1000,state=None)
+
+def init_test(hyp):
+	polled_agent = random.choice(swarms['init']['agents'])
+	#return polled_agent.hypothesis == Step(x=3,y=2,state=None)
+	return polled_agent.active
+
+@
+
+Before doing any of the other functions, we have to have a function to probabilistically perturb a register.
+
+<<>>=
+def perturb(register):
+	if random.random() < 0.1:
+		delta = random.choice((1,-1))
+		register += delta
+	return register
+@
+
+This is for `\(x > 0\)' swarm.
+
+<<>>=
+def xgt0_hyp(rng=random):
+	for swarm_name in ('init','incy'):
+		if swarms[swarm_name]['converged']:
+			polled = rng.choice(swarms[swarm_name]['agents'])
+			polled_x, polled_y, polled_state = polled.hypothesis
+			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+	else:
+		return Step(x=0,y=0,state=None)
+
+def xgt0_test(hyp):
+	for swarm_name in ('init','incy'):
+		if swarms[swarm_name]['converged']:
+			polled_agent = random.choice(swarms[swarm_name]['agents'])
+			break
+	else:
+		return False
+	if polled_agent.active:
+		polled_x, polled_y, _ = polled_agent.hypothesis
+		return hyp.x == polled_x and hyp.y == polled_y and hyp.x > 0
+	else:
+		raise RuntimeError('inactive agent polled')
+@
+
+This is for `Decrement X' swarm.
+
+<<>>=
+def decx_hyp(rng=random):
+	for swarm_name in ('xgt0',):
+		if swarms[swarm_name]['converged']:
+			polled = rng.choice(swarms[swarm_name]['agents'])
+			polled_x, polled_y, polled_state = polled.hypothesis
+			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+	else:
+		return Step(x=0,y=0,state=None)
+
+def decx_test(hyp):
+	if swarms['xgt0']['converged']:
+		polled_agent = random.choice(swarms['xgt0']['agents'])
+		if polled_agent.active:
+			polled_x, polled_y, _ = polled_agent.hypothesis
+			result = hyp.x == polled_x-1 and hyp.y == polled_y
+			return result
+		else:
+			raise RuntimeError('inactive agent polled')
+	else:
+		print('dec x failed test as xgt0 is not converged')
+		return False
+@
+
+This is for `Increment Y' swarm...
+<<>>=
+def incy_hyp(rng=random):
+	for swarm_name in ('decx',):
+		if swarms[swarm_name]['converged']:
+			polled = rng.choice(swarms[swarm_name]['agents'])
+			polled_x, polled_y, polled_state = polled.hypothesis
+			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+	else:
+		return Step(x=0,y=0,state=None)
+
+def incy_test(hyp):
+	if swarms['decx']['converged']:
+		polled_agent = random.choice(swarms['decx']['agents'])
+		if polled_agent.active:
+			polled_x, polled_y, _ = polled_agent.hypothesis
+			result = hyp.x == polled_x and hyp.y == polled_y+1
+			return result
+		else:
+			raise RuntimeError('inactive agent polled')
+	else:
+		print('incy failed test as decx is not converged')
+		return False
+@
+
+This is for `\(x = 0\)' swarm.
+<<>>=
+def xeq0_hyp(rng=random):
+	for swarm_name in ('init','incy'):
+		if swarms[swarm_name]['converged']:
+			polled = rng.choice(swarms[swarm_name]['agents'])
+			polled_x, polled_y, polled_state = polled.hypothesis
+			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+	else:
+		return Step(x=0,y=0,state=None)
+
+def xeq0_test(hyp):
+	for swarm_name in ('init','incy'):
+		if swarms[swarm_name]['converged']:
+			polled_agent = random.choice(swarms[swarm_name]['agents'])
+			break
+	else:
+		return False
+	if polled_agent.active:
+		polled_x, polled_y, _ = polled_agent.hypothesis
+		return hyp.x == polled_x and hyp.y == polled_y and hyp.x == 0
+	else:
+		raise RuntimeError('inactive agent polled')
+@
+
+This is for the halt swarm.
+<<>>=
+def halt_hyp(rng=random):
+	for swarm_name in ('xeq0',):
+		if swarms[swarm_name]['converged']:
+			polled = rng.choice(swarms[swarm_name]['agents'])
+			polled_x, polled_y, polled_state = polled.hypothesis
+			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+	else:
+		return Step(x=0,y=0,state=None)
+
+def halt_test(hyp):
+	for swarm_name in ('xeq0',):
+		if swarms[swarm_name]['converged']:
+			polled_agent = random.choice(swarms[swarm_name]['agents'])
+			break
+	else:
+		return False
+	if polled_agent.active:
+		polled_x, polled_y, _ = polled_agent.hypothesis
+		return hyp.x == polled_x and hyp.y == polled_y
+	else:
+		raise RuntimeError('inactive agent polled')
+@
+
+Here's a data structure to keep it all together.
+<<>>=
+multi_sds = [
+	('init',init_test,init_hyp,[]),
+	('xgt0',xgt0_test,xgt0_hyp,['init','incy']),
+	('decx',decx_test,decx_hyp,['xgt0']),
+	('incy',incy_test,incy_hyp,['decx']),
+	('xeq0',xeq0_test,xeq0_hyp,['init','incy']),
+	('halt',halt_test,halt_hyp,['xeq0']),
+]
+@
+
+\subsection{Multi-swarm execution}
+
+<<>>=
+def fully_active(swarm):
+	result = all(x.active for x in swarm)
+	return result
+
+def iterate():
+	for swarm_name, microtest, hyp_function, previous_swarms in multi_sds:
+		if not swarms[swarm_name]['converged']:
+			#print('processing',swarm_name)
+			# if swarm is not converged
+			sds.run(
+				swarm=swarms[swarm_name]['agents'],
+				microtests=[microtest],
+				random_hypothesis_function=hyp_function,
+				max_iterations=100,
+				halting_function=fully_active,
+				halting_iterations=10,
+				report_iterations=None,
+			)
+			if not all(agent.active for agent in swarms[swarm_name]['agents']):
+				#raise RuntimeError('I thought it would all be active by now')
+				#print(swarm_name,"didn't converge")
+				pass
+			else:
+				swarms[swarm_name]['converged'] = True
+				print(swarm_name,'is now converged at',swarms[swarm_name]['agents'][0].hypothesis)
+				if swarm_name == 'halt':
+					print('convergence in the halt swarm halts the process')
+					return True
+				for prev_swarm_name in previous_swarms:
+					if swarms[prev_swarm_name]['converged']:
+						swarms[prev_swarm_name]['converged'] = False
+						print(prev_swarm_name,'is no longer converged')
+						for agent in swarms[prev_swarm_name]['agents']:
+							agent.active = False
+							agent.hypothesis = 'butt'
+	return False
+
+halted = iterate()
+while not halted:
+	halted = iterate()
+
+print('done. Answer is',swarms['halt']['agents'][0].hypothesis.y)
+@
+
+\appendix{}
+
+\section{Index}
+
+\nowebindex{}
+
+\section{Code Chunks}
+
+\nowebchunks{}
+
+\end{document}
+
 \section{New script}
 <<new script>>=
 <<dependencies>>
 <<hypothesis>>
-<<peturbations>>
+<<perturbations>>
 <<turing swarm>>
 <<new hypothesis function>>
 <<microtest function>>
@@ -62,15 +581,15 @@ XY = namedtuple('XY',('x','y'))
 from collections import namedtuple
 @
 
-\section{Peturbations}
-<<peturbations>>=
+\section{perturbations}
+<<perturbations>>=
 noop = lambda xy: xy
 incx = lambda xy: XY(xy.x+1, xy.y)
 decx = lambda xy: XY(max(0,xy.x-1), xy.y)
 incy = lambda xy: XY(xy.x, xy.y+1)
 decy = lambda xy: XY(xy.x, max(0,xy.y-1))
 
-peturbations = (noop, incx, decx, incy, decy)
+perturbations = (noop, incx, decx, incy, decy)
 @
 
 \section{Turing Swarm}
@@ -114,9 +633,9 @@ def generic_new_hyp_function(random, linked_swarms):
 
 	polled_hypothesis = polled_agent.hypothesis
 
-	random_peturbation = random.choice(peturbations)
+	random_perturbation = random.choice(perturbations)
 
-	return random_peturbation(polled_hypothesis)
+	return random_perturbation(polled_hypothesis)
 @
 
 <<dependencies>>=
@@ -321,15 +840,4 @@ synchronous_execution(swarms,max_iterations=500)
 print('Done')
 @
 
-\appendix{}
-
-\section{Index}
-
-\nowebindex{}
-
-\section{Code Chunks}
-
-\nowebchunks{}
-
-\end{document}
 

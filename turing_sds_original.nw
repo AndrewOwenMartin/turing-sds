@@ -742,11 +742,11 @@ def test():
 	swarm = sds.Agent.initialise(100)
 	run_turing_sds(swarm, max_iterations=100000)
 
-do_single_swarm_test = False
+do_single_swarm_test = True
 if do_single_swarm_test:
 	test()
 
-do_multiple_swarm_test = True
+do_multiple_swarm_test = False
 if do_multiple_swarm_test:
 	run_multiple_swarms()
 @
