@@ -38,6 +38,10 @@
 \maketitle
 \tableofcontents
 
+\section{Introduction}
+
+Run the code for the Multi-swarm solution with [[make code && python multi_swarm_solution.py]] and for the Two Agent solution with [[make code && python run_two_agent_solution.py]].
+
 \section{Preliminary assumptions}
 
 To go from something like NORMA2 to a new swarmy implementation, we need to know what things we can and cannot change.
