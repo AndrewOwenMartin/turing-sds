@@ -546,8 +546,7 @@ def iterate(solution):
 	#print('not halted yet')
 	return False
 
-do_naive_multiswarm_solution = False
-if do_naive_multiswarm_solution:
+def do_naive_multiswarm_solution():
 
 	for num, swarm_name in enumerate(swarm_names,start=1):
 		print(num, swarm_name, swarms[swarm_name])
@@ -558,6 +557,8 @@ if do_naive_multiswarm_solution:
 			break
 
 	print('done. Answer is',swarms['halt']['agents'][0].hypothesis.y)
+
+#do_naive_multiswarm_solution()
 @
 
 \section{Multi swarm solution with functional programming}
@@ -600,7 +601,7 @@ def Xdontcare(x):
 This is a function to make all the test function for all the swarms.
 
 <<>>=
-def make_test_fun(swarms, linked_swarms,action,x_condition,rng=random):
+def `make_test_fun(swarms, linked_swarms,action,x_condition,rng=random):
 	def generic_test_fun(
 		swarms, 
 		previous_swarm_names,
@@ -632,7 +633,7 @@ def make_test_fun(swarms, linked_swarms,action,x_condition,rng=random):
 This is a function to make all the hyp functions for all the swarms.
 
 <<>>=
-def make_hyp_fun(swarms, linked_swarms):
+def `make_hyp_fun(swarms, linked_swarms):
 	def generic_hyp_fun(swarms, linked_swarms,rng=random):
 		for swarm_name in linked_swarms:
 			if swarms[swarm_name]['converged']:
@@ -675,7 +676,7 @@ state_table = [
 Now let's try to build a multi swarm solution from the table.
 
 <<>>=
-def build_solution(state_table,initial_x,initial_y):
+def `build_solution(state_table,initial_x,initial_y):
 	swarms = {
 		name: {
 			'converged': False,
@@ -706,8 +707,7 @@ def build_solution(state_table,initial_x,initial_y):
 @
 
 <<>>=
-do_functional_multiswarm_solution = True
-if do_functional_multiswarm_solution:
+def do_functional_multiswarm_solution():
 
 	functional_solution = build_solution(state_table,initial_x=1000,initial_y=1000)
 
@@ -719,22 +719,10 @@ if do_functional_multiswarm_solution:
 	answer = halt_swarm['agents'][0].hypothesis.y
 	print('Answer is',answer)
 	#print('done. Answer is',['halt']['agents'][0].hypothesis.y)
+
+#do_functional_multiswarm_solution()
 @
 
-<<>>=
-	#solution[0][1] = make_test_fun(['init'],noop,Xdontcare,random)
-	#solution[0][2] = make_hyp_fun(['init'])
-	#solution[1][1] = make_test_fun(['init','incy'],noop,Xgt0,random)
-	#solution[1][2] = make_hyp_fun(['init','incy'])
-	#solution[2][1] = make_test_fun(['xgt0'],decrementX,Xdontcare,random)
-	#solution[2][2] = make_hyp_fun(['xgt0'])
-	#solution[3][1] = make_test_fun(['decx'],incrementY,Xdontcare,random)
-	#solution[3][2] = make_hyp_fun(['decx'])
-	#solution[4][1] = make_test_fun(['init','incy'],noop,Xeq0,random)
-	#solution[4][2] = make_hyp_fun(['init','incy'])
-	#solution[5][1] = make_test_fun(['xeq0'],noop,Xdontcare,random)
-	#solution[5][2] = make_hyp_fun(['xeq0'])
-@
 
 \appendix{}
 
