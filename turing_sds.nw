@@ -133,7 +133,7 @@ def diffuse(swarm):
 
 			else:
 
-				agent.hyp = initial_hyp()	
+				agent.hyp = initial_hyp()
 @
 
 That all seems fairly safe, I should point out that the randomisation of state in the transmission error will be mitigated if each agent existed within a swarm that defined a single state. To clarify this, rather than a single homogeneous swarm, imagine a swarm of agents in each row of the state table, then each swarm would ``know'' what they were hypothesising as the next state.
@@ -293,8 +293,10 @@ import random
 import sds
 from collections import namedtuple
 import functools
+import sys
+import itertools
 
-Step = namedtuple('Step',['x','y','state'])
+XY = namedtuple('XY',['x','y'])
 
 def agent_repr(self):
 	if self.active:
@@ -329,7 +331,7 @@ This action has to be considered carefully as it must be the case that this swar
 
 <<>>=
 for agent in swarms['init']['agents']:
-	agent.hypothesis = Step(x=10,y=10,state=None)
+	agent.hypothesis = XY(x=10,y=10)
 	agent.active = True
 
 swarms['init']['converged'] = True
@@ -343,12 +345,12 @@ This is for the init swarm.
 <<>>=
 def init_hyp(rng=random):
 	#print('init hyp runs')
-	return Step(x=1000,y=1000,state=None)
+	return XY(x=1000,y=1000)
 
 def init_test(hyp):
 	#print('init test runs')
 	polled_agent = random.choice(swarms['init']['agents'])
-	#return polled_agent.hypothesis == Step(x=3,y=2,state=None)
+	#return polled_agent.hypothesis == XY(x=3,y=2)
 	return polled_agent.active
 
 @
@@ -357,7 +359,7 @@ Before doing any of the other functions, we have to have a function to probabili
 
 <<>>=
 def perturb(register):
-	if random.random() < 0.1:
+	if random.random() < 0.5:
 		delta = random.choice((1,-1))
 		register += delta
 	return register
@@ -370,10 +372,10 @@ def xgt0_hyp(rng=random):
 	for swarm_name in ('init','incy'):
 		if swarms[swarm_name]['converged']:
 			polled = rng.choice(swarms[swarm_name]['agents'])
-			polled_x, polled_y, polled_state = polled.hypothesis
-			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+			polled_x, polled_y = polled.hypothesis
+			return XY(x=perturb(polled_x),y=perturb(polled_y))
 	else:
-		return Step(x=0,y=0,state=None)
+		return XY(x=0,y=0)
 
 def xgt0_test(hyp):
 	for swarm_name in ('init','incy'):
@@ -383,7 +385,7 @@ def xgt0_test(hyp):
 	else:
 		return False
 	if polled_agent.active:
-		polled_x, polled_y, _ = polled_agent.hypothesis
+		polled_x, polled_y = polled_agent.hypothesis
 		return hyp.x == polled_x and hyp.y == polled_y and hyp.x > 0
 	else:
 		raise RuntimeError('inactive agent polled')
@@ -396,16 +398,16 @@ def decx_hyp(rng=random):
 	for swarm_name in ('xgt0',):
 		if swarms[swarm_name]['converged']:
 			polled = rng.choice(swarms[swarm_name]['agents'])
-			polled_x, polled_y, polled_state = polled.hypothesis
-			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+			polled_x, polled_y = polled.hypothesis
+			return XY(x=perturb(polled_x),y=perturb(polled_y))
 	else:
-		return Step(x=0,y=0,state=None)
+		return XY(x=0,y=0)
 
 def decx_test(hyp):
 	if swarms['xgt0']['converged']:
 		polled_agent = random.choice(swarms['xgt0']['agents'])
 		if polled_agent.active:
-			polled_x, polled_y, _ = polled_agent.hypothesis
+			polled_x, polled_y = polled_agent.hypothesis
 			result = hyp.x == polled_x-1 and hyp.y == polled_y
 			return result
 		else:
@@ -421,16 +423,16 @@ def incy_hyp(rng=random):
 	for swarm_name in ('decx',):
 		if swarms[swarm_name]['converged']:
 			polled = rng.choice(swarms[swarm_name]['agents'])
-			polled_x, polled_y, polled_state = polled.hypothesis
-			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+			polled_x, polled_y = polled.hypothesis
+			return XY(x=perturb(polled_x),y=perturb(polled_y))
 	else:
-		return Step(x=0,y=0,state=None)
+		return XY(x=0,y=0)
 
 def incy_test(hyp):
 	if swarms['decx']['converged']:
 		polled_agent = random.choice(swarms['decx']['agents'])
 		if polled_agent.active:
-			polled_x, polled_y, _ = polled_agent.hypothesis
+			polled_x, polled_y = polled_agent.hypothesis
 			result = hyp.x == polled_x and hyp.y == polled_y+1
 			return result
 		else:
@@ -446,10 +448,10 @@ def xeq0_hyp(rng=random):
 	for swarm_name in ('init','incy'):
 		if swarms[swarm_name]['converged']:
 			polled = rng.choice(swarms[swarm_name]['agents'])
-			polled_x, polled_y, polled_state = polled.hypothesis
-			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+			polled_x, polled_y = polled.hypothesis
+			return XY(x=perturb(polled_x),y=perturb(polled_y))
 	else:
-		return Step(x=0,y=0,state=None)
+		return XY(x=0,y=0)
 
 def xeq0_test(hyp):
 	for swarm_name in ('init','incy'):
@@ -459,7 +461,7 @@ def xeq0_test(hyp):
 	else:
 		return False
 	if polled_agent.active:
-		polled_x, polled_y, _ = polled_agent.hypothesis
+		polled_x, polled_y = polled_agent.hypothesis
 		return hyp.x == polled_x and hyp.y == polled_y and hyp.x == 0
 	else:
 		raise RuntimeError('inactive agent polled')
@@ -471,10 +473,10 @@ def halt_hyp(rng=random):
 	for swarm_name in ('xeq0',):
 		if swarms[swarm_name]['converged']:
 			polled = rng.choice(swarms[swarm_name]['agents'])
-			polled_x, polled_y, polled_state = polled.hypothesis
-			return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+			polled_x, polled_y = polled.hypothesis
+			return XY(x=perturb(polled_x),y=perturb(polled_y))
 	else:
-		return Step(x=0,y=0,state=None)
+		return XY(x=0,y=0)
 
 def halt_test(hyp):
 	for swarm_name in ('xeq0',):
@@ -484,7 +486,7 @@ def halt_test(hyp):
 	else:
 		return False
 	if polled_agent.active:
-		polled_x, polled_y, _ = polled_agent.hypothesis
+		polled_x, polled_y = polled_agent.hypothesis
 		return hyp.x == polled_x and hyp.y == polled_y
 	else:
 		raise RuntimeError('inactive agent polled')
@@ -568,33 +570,33 @@ I'll carry on editing the same file as there will be a lot of code sharing.
 I need to make some 'intended action' functions to save me typing five different sets of logic.
 
 <<>>=
-def decrementX(hyp):
-	hyp_x, hyp_y, _ = hyp
-	return Step(hyp_x-1, hyp_y, None)
+def `decrementX(hyp):
+	hyp_x, hyp_y = hyp
+	return XY(hyp_x-1, hyp_y)
 
-def decrementY(hyp):
-	hyp_x, hyp_y, _ = hyp
-	return Step(hyp_x, hyp_y-1, None)
+def `decrementY(hyp):
+	hyp_x, hyp_y = hyp
+	return XY(hyp_x, hyp_y-1)
 
-def incrementX(hyp):
-	hyp_x, hyp_y, _ = hyp
-	return Step(hyp_x+1, hyp_y, None)
+def `incrementX(hyp):
+	hyp_x, hyp_y = hyp
+	return XY(hyp_x+1, hyp_y)
 
-def incrementY(hyp):
-	hyp_x, hyp_y, _ = hyp
-	return Step(hyp_x, hyp_y+1, None)
+def `incrementY(hyp):
+	hyp_x, hyp_y = hyp
+	return XY(hyp_x, hyp_y+1)
 
-def noop(hyp):
-	hyp_x, hyp_y, _ = hyp
-	return Step(hyp_x, hyp_y, None)
+def `noop(hyp):
+	hyp_x, hyp_y = hyp
+	return XY(hyp_x, hyp_y)
 
-def Xeq0(x):
+def `Xeq0(x):
 	return x == 0
 
-def Xgt0(x):
+def `Xgt0(x):
 	return x > 0
 
-def Xdontcare(x):
+def `Xdontcare(x):
 	return True
 @
 
@@ -603,7 +605,7 @@ This is a function to make all the test function for all the swarms.
 <<>>=
 def `make_test_fun(swarms, linked_swarms,action,x_condition,rng=random):
 	def generic_test_fun(
-		swarms, 
+		swarms,
 		previous_swarm_names,
 		intended_action_function,
 		x_condition_function,
@@ -617,7 +619,7 @@ def `make_test_fun(swarms, linked_swarms,action,x_condition,rng=random):
 		else:
 			return False
 		if polled_agent.active:
-			polled_x, polled_y, _ = intended_action_function(polled_agent.hypothesis)
+			polled_x, polled_y = intended_action_function(polled_agent.hypothesis)
 			return (
 				hyp.x == polled_x
 				and hyp.y == polled_y
@@ -625,7 +627,13 @@ def `make_test_fun(swarms, linked_swarms,action,x_condition,rng=random):
 		else:
 			raise RuntimeError('inactive agent polled')
 
-	return functools.partial(generic_test_fun,swarms,linked_swarms,action,x_condition,rng)
+	return functools.partial(
+		generic_test_fun,
+		swarms,
+		linked_swarms,
+		action,
+		x_condition,
+		rng,)
 
 #foo = make_hyp_fun(linked_swarms=['init','incy'],action=noop,x_condition=Xgt0)
 @
@@ -638,10 +646,10 @@ def `make_hyp_fun(swarms, linked_swarms):
 		for swarm_name in linked_swarms:
 			if swarms[swarm_name]['converged']:
 				polled = rng.choice(swarms[swarm_name]['agents'])
-				polled_x, polled_y, polled_state = polled.hypothesis
-				return Step(x=perturb(polled_x),y=perturb(polled_y),state=None)
+				polled_x, polled_y = polled.hypothesis
+				return XY(x=perturb(polled_x),y=perturb(polled_y))
 		else:
-			return Step(x=0,y=0,state=None)
+			return XY(x=0,y=0)
 	return functools.partial(generic_hyp_fun, swarms, linked_swarms)
 @
 
@@ -692,12 +700,12 @@ def `build_solution(state_table,initial_x,initial_y):
 		if swarm_type == 'init':
 			swarm = swarms[name]
 			for agent in swarm['agents']:
-				agent.hypothesis = Step(x=initial_x,y=initial_y,state=None)
+				agent.hypothesis = XY(x=initial_x,y=initial_y)
 				agent.active = True
 			swarm['converged'] = True
 
 		action, x_condition = swarm_types[swarm_type]
-		
+
 		test_fun = make_test_fun(swarms, linked_swarms,action,x_condition,random)
 		hyp_fun = make_hyp_fun(swarms, linked_swarms)
 
@@ -723,6 +731,211 @@ def do_functional_multiswarm_solution():
 #do_functional_multiswarm_solution()
 @
 
+\section{Quorum sensing}
+
+The previous multi swarm version relied on a flag for each swarm which determined whether or not it was executing.
+We now hope to replace that flag, with a two-phase behaviour of agents, which implement the effect of the flag once they determine their swarm has converged.
+
+So agents are either (i) polling the previous swarm to check whether their registers are correct, or (ii) remain active, while polling the previous swarm to suppress activity there.
+
+So each agent needs to maintain an internal variable, which is used for quorum sensing.
+
+Here's my take on Bish's pseudocode.
+<<quorum test phase>>=
+if agent.quorum_count > quorum_threshold:
+	inhibit_mode(agent)
+else:
+	polled = random.choice(swarm)
+	if polled.quorum_count > quorum_threshold and check_registers(agent.hyp, polled.hyp):
+			agent.quorum_count += 1
+	else:
+		agent.quorum_count = 0
+@
+
+<<quorum inhibit mode>>=
+polled = random.choice(swarm)
+polled.quorum_count = 0
+@
+
+<<quorum diffusion phase>>=
+if agent.quorum_count == 0:
+	polled = random.choice(swarm)
+	if polled.quorum_count > 0:
+		agent.hyp = polled.hyp
+	else:
+		new_hyp()
+@
+
+\subsection{Quorum test function}
+<<multi-swarm-solution.py>>=
+def quorum_test_phase(swarm, linked_swarms, quorum_threshold, swarm_test_function, rng=random):
+	for agent in swarm:
+		random_swarm = random.choice(linked_swarms)
+		polled = random.choice(random_swarm)
+		if agent.active < quorum_threshold:
+			if polled.active >= quorum_threshold: #Don't do a microtest against non-quorate swarms
+				if swarm_test_function(agent, polled):
+					agent.active += 1
+				else:
+					agent.active = 0
+		else:
+			polled.active = 0
+@
+
+\subsection{Quorum microtest}
+
+Consider making it so the other agent is passed in, not polled in this function.
+
+This used to make agents go inactive if they polled an inactive agent in a linked/previous swarm. [[
+if (
+	(polled.active < quorum_threshold)
+	or registers_not_right
+):
+	return 0
+else:
+	return agent.active + 1
+]]
+but this means that any swarm polling form two swarms will go inactive half the time.
+
+This function can do with a big cleanup, it probably should just be doing registers checking.
+
+<<multi-swarm-solution.py>>=
+def quorum_make_test_fun(swarms, linked_swarm_names, action, x_condition,
+	quorum_threshold, rng=random):
+
+	def quorum_generic_test_fun(linked_swarms, intended_action_function, x_condition,
+		quorum_threshold, rng, agent, polled,
+	):
+		# return True if registers are good. False otherwise.
+		polled_x, polled_y = intended_action_function(polled.hypothesis)
+		hyp = agent.hypothesis
+		return (hyp.x == polled_x and hyp.y == polled_y and x_condition(hyp.x))
+
+	#def quorum_generic_test_fun(linked_swarms, intended_action_function, x_condition,
+	#	quorum_threshold, rng, agent):
+
+	#	hyp = agent.hypothesis
+	#	random_swarm = rng.choice(linked_swarms)
+	#	polled = rng.choice(random_swarm)
+	#	polled_x, polled_y = intended_action_function(polled.hypothesis)
+	#	if (
+	#		(polled.active < quorum_threshold)
+	#		or not (hyp.x == polled_x and hyp.y == polled_y and x_condition(hyp.x))
+	#	):
+	#		return 0
+	#	else:
+	#		return agent.active + 1
+
+	linked_swarms = [swarms[name] for name in linked_swarm_names]
+
+	return functools.partial(
+		quorum_generic_test_fun,
+		linked_swarms,
+		action,
+		x_condition,
+		quorum_threshold,
+		rng,)
+
+@
+
+\subsection{Quorum new hypothesis}
+<<>>=
+def quorum_make_hyp_fun(swarms, linked_swarm_names):
+
+	def quorum_generic_hyp_fun(linked_swarms, rng=random):
+		random_swarm = rng.choice(linked_swarms)
+		polled = rng.choice(random_swarm)
+		polled_x, polled_y = polled.hypothesis
+		return XY(x=perturb(polled_x),y=perturb(polled_y))
+
+	linked_swarms = [swarms[swarm_name] for swarm_name in linked_swarm_names]
+
+	return functools.partial(quorum_generic_hyp_fun, linked_swarms)
+@
+
+
+\subsection{Quorum build new solution}
+<<>>=
+def quorum_build_solution(state_table, initial_x, initial_y, agent_count, quorum_threshold):
+
+	swarms = {
+		name:[sds.Agent() for _ in range(agent_count)]
+		for name,_,_ in state_table
+	}
+
+	for name, swarm_type, linked_swarms in state_table:
+		if swarm_type == 'init':
+			for agent in swarms[name]:
+				agent.hypothesis = XY(x=initial_x,y=initial_y)
+				agent.active = quorum_threshold
+		else:
+			for agent in swarms[name]:
+				agent.active = 0
+				agent.hypothesis = XY(x=0,y=0)
+
+	solution = []
+
+	for swarm_name, swarm_type, linked_swarm_names in state_table:
+
+		action, x_condition = swarm_types[swarm_type]
+
+		test_fun = quorum_make_test_fun(swarms, linked_swarm_names, action, x_condition, quorum_threshold,)
+
+		hyp_function = quorum_make_hyp_fun(swarms, linked_swarm_names)
+
+		previous_swarms = [swarms[name] for name in linked_swarm_names]
+
+		solution.append((swarm_name, swarms[swarm_name], test_fun, hyp_function, previous_swarms))
+
+	return solution
+@
+
+\subsection{Quorum iterate}
+At this point, `microtest' is a function which takes an agent and returns whether a random linked agent is blahhh.
+<<>>=
+def quorum_iterate(solution, quorum_threshold):
+	for swarm_name, swarm, microtest, hyp_function, previous_swarms in solution:
+		#print('iterating',swarm_name)
+		#diffusion
+		for agent in swarm:
+			if agent.active == 0:
+				polled = random.choice(swarm)
+				if polled.active > 0:
+					agent.hypothesis = polled.hypothesis
+					agent.active = polled.active
+				else:
+					agent.hypothesis = hyp_function(random)
+
+		#test
+		quorum_test_phase(swarm, previous_swarms, quorum_threshold, microtest, random)
+
+
+		agents = [(agent.hypothesis, agent.active) for agent in swarm]
+		#print(swarm_name,agents)
+	halt_swarm = next(swarm for name,swarm,_,_,_ in solution if name == 'halt')
+	return all(x.active >= quorum_threshold for x in halt_swarm)
+@
+
+\subsection{Quorum execute}
+<<multi-swarm-solution.py>>=
+def do_quorum_sensing_solution(quorum_threshold):
+
+	solution = quorum_build_solution(state_table,initial_x=1000,initial_y=1000,agent_count=5,quorum_threshold=quorum_threshold)
+
+	for repeat in itertools.count(): #range(2000):
+		if quorum_iterate(solution[1:], quorum_threshold):
+			print('Finished at iteration {r}. Answer is {a}.'.format(
+				r=repeat,
+				a=next(agent for agent in next(swarm for name,swarm,_,_,_ in solution if name == 'halt')).hypothesis.y
+			))
+			break
+
+	#for name,swarm,_,_,_ in solution:
+	#	print(name,[(agent.hypothesis, agent.active) for agent in swarm])
+
+
+do_quorum_sensing_solution(quorum_threshold=3)
+@
 
 \appendix{}
 
