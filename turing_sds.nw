@@ -358,11 +358,8 @@ def init_test(hyp):
 Before doing any of the other functions, we have to have a function to probabilistically perturb a register.
 
 <<>>=
-def perturb(register):
-	if random.random() < 0.5:
-		delta = random.choice((1,-1))
-		register += delta
-	return register
+def perturb(register): #PERTURB
+	return register + random.choice((1,0,-1))
 @
 
 This is for `\(x > 0\)' swarm.
@@ -768,18 +765,27 @@ if agent.quorum_count == 0:
 
 \subsection{Quorum test function}
 <<multi-swarm-solution.py>>=
-def quorum_test_phase(swarm, linked_swarms, quorum_threshold, swarm_test_function, rng=random):
-	for agent in swarm:
+def quorum_test_phase(swarm_name, swarm, linked_swarms, quorum_threshold, swarm_test_function, rng=random):
+	for agent_num, agent in enumerate(swarm):
 		random_swarm = random.choice(linked_swarms)
 		polled = random.choice(random_swarm)
 		if agent.active < quorum_threshold:
 			if polled.active >= quorum_threshold: #Don't do a microtest against non-quorate swarms
 				if swarm_test_function(agent, polled):
 					agent.active += 1
+					if swarm_name == 'B-xgt0':
+						print(agent_num,"in",swarm_name,"increases count")
 				else:
 					agent.active = 0
+					if swarm_name == 'B-xgt0':
+						print(agent_num,"in",swarm_name,"inactive due to bad registers")
+			else:
+				if swarm_name == 'B-xgt0':
+					print(agent_num,"in",swarm_name,"no action due to polling non quorate")
 		else:
 			polled.active = 0
+			if swarm_name == 'B-xgt0':
+				print(agent_num,"supressed a polled agent")
 @
 
 \subsection{Quorum microtest}
@@ -897,41 +903,48 @@ def quorum_iterate(solution, quorum_threshold):
 	for swarm_name, swarm, microtest, hyp_function, previous_swarms in solution:
 		#print('iterating',swarm_name)
 		#diffusion
-		for agent in swarm:
+		for agent_num, agent in enumerate(swarm):
 			if agent.active == 0:
 				polled = random.choice(swarm)
 				if polled.active > 0:
 					agent.hypothesis = polled.hypothesis
-					agent.active = polled.active
+					if agent.hypothesis == XY(1000,1000) and swarm_name == 'B-xgt0':
+						print("agent",agent_num,"in swarm",swarm_name,"diffuses ",agent.hypothesis)
+					#agent.active = polled.active # DIFFUSION
 				else:
 					agent.hypothesis = hyp_function(random)
+					if agent.hypothesis == XY(1000,1000) and swarm_name == 'B-xgt0':
+						print("agent",agent_num,"in swarm",swarm_name,"generates ",agent.hypothesis)
 
 		#test
-		quorum_test_phase(swarm, previous_swarms, quorum_threshold, microtest, random)
-
+		quorum_test_phase(swarm_name, swarm, previous_swarms, quorum_threshold, microtest, random)
 
 		agents = [(agent.hypothesis, agent.active) for agent in swarm]
 		#print(swarm_name,agents)
 	halt_swarm = next(swarm for name,swarm,_,_,_ in solution if name == 'halt')
-	return all(x.active >= quorum_threshold for x in halt_swarm)
+	return any(x.active >= quorum_threshold for x in halt_swarm)
 @
 
 \subsection{Quorum execute}
 <<multi-swarm-solution.py>>=
 def do_quorum_sensing_solution(quorum_threshold):
 
-	solution = quorum_build_solution(state_table,initial_x=1000,initial_y=1000,agent_count=5,quorum_threshold=quorum_threshold)
+	solution = quorum_build_solution(state_table,initial_x=1000,initial_y=100,agent_count=5,quorum_threshold=quorum_threshold)
 
-	for repeat in itertools.count(): #range(2000):
+	for repeat in itertools.count(): #range(10000):
 		if quorum_iterate(solution[1:], quorum_threshold):
 			print('Finished at iteration {r}. Answer is {a}.'.format(
 				r=repeat,
-				a=next(agent for agent in next(swarm for name,swarm,_,_,_ in solution if name == 'halt')).hypothesis.y
+				a=next(agent for agent in next(swarm for name,swarm,_,_,_ in solution if name == 'halt') if agent.active >= quorum_threshold).hypothesis.y
 			))
 			break
+		if repeat % 1 == 0:
+			print("Iteration",repeat)
+		for name,swarm,_,_,_ in solution:
+			print(name,[(agent.hypothesis, agent.active) for agent in swarm])
 
-	#for name,swarm,_,_,_ in solution:
-	#	print(name,[(agent.hypothesis, agent.active) for agent in swarm])
+	for name,swarm,_,_,_ in solution:
+		print(name,[(agent.hypothesis, agent.active) for agent in swarm])
 
 
 do_quorum_sensing_solution(quorum_threshold=3)
