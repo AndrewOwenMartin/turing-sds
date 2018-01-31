@@ -728,6 +728,7 @@ def do_functional_multiswarm_solution():
 #do_functional_multiswarm_solution()
 @
 
+\clearpage{}
 \section{Quorum sensing}
 
 The previous multi swarm version relied on a flag for each swarm which determined whether or not it was executing.
@@ -740,52 +741,78 @@ So each agent needs to maintain an internal variable, which is used for quorum s
 Here's my take on Bish's pseudocode.
 <<quorum test phase>>=
 if agent.quorum_count > quorum_threshold:
-	inhibit_mode(agent)
+
+	inhibit_mode(linked_swarms)
+
 else:
+
 	polled = random.choice(swarm)
-	if polled.quorum_count > quorum_threshold and check_registers(agent.hyp, polled.hyp):
-			agent.quorum_count += 1
+
+	if (
+		polled.quorum_count > quorum_threshold
+		and check_registers(agent.hyp, polled.hyp)
+	):
+
+		agent.quorum_count += 1
+
 	else:
+
 		agent.quorum_count = 0
 @
 
 <<quorum inhibit mode>>=
-polled = random.choice(swarm)
-polled.quorum_count = 0
+def inhibit_mode(linked_swarms):
+	random_swarm = random.choice(linked_swarms)
+
+	polled = random.choice(swarm)
+
+	polled.quorum_count = 0
 @
 
 <<quorum diffusion phase>>=
 if agent.quorum_count == 0:
+
 	polled = random.choice(swarm)
+
 	if polled.quorum_count > 0:
+
 		agent.hyp = polled.hyp
+
 	else:
+
 		new_hyp()
 @
 
+
 \subsection{Quorum test function}
 <<multi-swarm-solution.py>>=
-def quorum_test_phase(swarm_name, swarm, linked_swarms, quorum_threshold, swarm_test_function, rng=random):
+def `quorum_test_phase(
+	swarm,
+	linked_swarms,
+	quorum_threshold,
+	swarm_test_function,
+	rng=random
+):
 	for agent_num, agent in enumerate(swarm):
+
 		random_swarm = random.choice(linked_swarms)
+
 		polled = random.choice(random_swarm)
+
 		if agent.active < quorum_threshold:
-			if polled.active >= quorum_threshold: #Don't do a microtest against non-quorate swarms
+
+			if polled.active >= quorum_threshold:
+
 				if swarm_test_function(agent, polled):
+
 					agent.active += 1
-					if swarm_name == 'B-xgt0':
-						print(agent_num,"in",swarm_name,"increases count")
+
 				else:
+
 					agent.active = 0
-					if swarm_name == 'B-xgt0':
-						print(agent_num,"in",swarm_name,"inactive due to bad registers")
-			else:
-				if swarm_name == 'B-xgt0':
-					print(agent_num,"in",swarm_name,"no action due to polling non quorate")
 		else:
+
 			polled.active = 0
-			if swarm_name == 'B-xgt0':
-				print(agent_num,"supressed a polled agent")
 @
 
 \subsection{Quorum microtest}
@@ -800,39 +827,41 @@ if (
 	return 0
 else:
 	return agent.active + 1
-]]
-but this means that any swarm polling form two swarms will go inactive half the time.
+]]but this means that any swarm polling from two swarms will go inactive half the time.
 
 This function can do with a big cleanup, it probably should just be doing registers checking.
-
+It looks a bit complicated, but it saves me writing a `registers are ok' function for each swarm.
+\clearpage{}
 <<multi-swarm-solution.py>>=
-def quorum_make_test_fun(swarms, linked_swarm_names, action, x_condition,
-	quorum_threshold, rng=random):
+def `quorum_make_test_fun(
+	swarms,
+	linked_swarm_names,
+	action,
+	x_condition,
+	quorum_threshold,
+	rng=random,
+):
 
-	def quorum_generic_test_fun(linked_swarms, intended_action_function, x_condition,
-		quorum_threshold, rng, agent, polled,
+	def quorum_generic_test_fun(
+		linked_swarms,
+		intended_action_function,
+		x_condition,
+		quorum_threshold,
+		rng,
+		agent,
+		polled,
 	):
-		# return True if registers are good. False otherwise.
-		polled_x, polled_y = intended_action_function(polled.hypothesis)
+		next_x, next_y = intended_action_function(polled.hypothesis)
+
 		hyp = agent.hypothesis
-		return (hyp.x == polled_x and hyp.y == polled_y and x_condition(hyp.x))
 
-	#def quorum_generic_test_fun(linked_swarms, intended_action_function, x_condition,
-	#	quorum_threshold, rng, agent):
+		# return True if registers are good. False otherwise.
+		return (hyp.x == next_x and hyp.y == next_y and x_condition(hyp.x))
 
-	#	hyp = agent.hypothesis
-	#	random_swarm = rng.choice(linked_swarms)
-	#	polled = rng.choice(random_swarm)
-	#	polled_x, polled_y = intended_action_function(polled.hypothesis)
-	#	if (
-	#		(polled.active < quorum_threshold)
-	#		or not (hyp.x == polled_x and hyp.y == polled_y and x_condition(hyp.x))
-	#	):
-	#		return 0
-	#	else:
-	#		return agent.active + 1
-
-	linked_swarms = [swarms[name] for name in linked_swarm_names]
+	linked_swarms = [
+		swarms[swarm_name]
+		for swarm_name
+		in linked_swarm_names]
 
 	return functools.partial(
 		quorum_generic_test_fun,
@@ -846,15 +875,22 @@ def quorum_make_test_fun(swarms, linked_swarm_names, action, x_condition,
 
 \subsection{Quorum new hypothesis}
 <<>>=
-def quorum_make_hyp_fun(swarms, linked_swarm_names):
+def `quorum_make_hyp_fun(swarms, linked_swarm_names):
 
 	def quorum_generic_hyp_fun(linked_swarms, rng=random):
+
 		random_swarm = rng.choice(linked_swarms)
+
 		polled = rng.choice(random_swarm)
+
 		polled_x, polled_y = polled.hypothesis
+
 		return XY(x=perturb(polled_x),y=perturb(polled_y))
 
-	linked_swarms = [swarms[swarm_name] for swarm_name in linked_swarm_names]
+	linked_swarms = [
+		swarms[swarm_name]
+		for swarm_name
+		in linked_swarm_names]
 
 	return functools.partial(quorum_generic_hyp_fun, linked_swarms)
 @
@@ -862,7 +898,12 @@ def quorum_make_hyp_fun(swarms, linked_swarm_names):
 
 \subsection{Quorum build new solution}
 <<>>=
-def quorum_build_solution(state_table, initial_x, initial_y, agent_count, quorum_threshold):
+def `quorum_build_solution(
+	state_table,
+	initial_x,
+	initial_y,
+	agent_count,
+	quorum_threshold,):
 
 	swarms = {
 		name:[sds.Agent() for _ in range(agent_count)]
@@ -870,13 +911,21 @@ def quorum_build_solution(state_table, initial_x, initial_y, agent_count, quorum
 	}
 
 	for name, swarm_type, linked_swarms in state_table:
+
 		if swarm_type == 'init':
+
 			for agent in swarms[name]:
+
 				agent.hypothesis = XY(x=initial_x,y=initial_y)
+
 				agent.active = quorum_threshold
+
 		else:
+
 			for agent in swarms[name]:
+
 				agent.active = 0
+
 				agent.hypothesis = XY(x=0,y=0)
 
 	solution = []
@@ -885,13 +934,28 @@ def quorum_build_solution(state_table, initial_x, initial_y, agent_count, quorum
 
 		action, x_condition = swarm_types[swarm_type]
 
-		test_fun = quorum_make_test_fun(swarms, linked_swarm_names, action, x_condition, quorum_threshold,)
+		test_fun = quorum_make_test_fun(
+			swarms,
+			linked_swarm_names,
+			action,
+			x_condition,
+			quorum_threshold,)
 
 		hyp_function = quorum_make_hyp_fun(swarms, linked_swarm_names)
 
-		previous_swarms = [swarms[name] for name in linked_swarm_names]
+		previous_swarms = [
+			swarms[name]
+			for name
+			in linked_swarm_names]
 
-		solution.append((swarm_name, swarms[swarm_name], test_fun, hyp_function, previous_swarms))
+		swarm_solution = (
+			swarm_name,
+			swarms[swarm_name],
+			test_fun,
+			hyp_function,
+			previous_swarms)
+
+		solution.append(swarm_solution)
 
 	return solution
 @
@@ -899,56 +963,130 @@ def quorum_build_solution(state_table, initial_x, initial_y, agent_count, quorum
 \subsection{Quorum iterate}
 At this point, `microtest' is a function which takes an agent and returns whether a random linked agent is blahhh.
 <<>>=
-def quorum_iterate(solution, quorum_threshold):
+def `quorum_iterate(solution, quorum_threshold):
+
 	for swarm_name, swarm, microtest, hyp_function, previous_swarms in solution:
-		#print('iterating',swarm_name)
-		#diffusion
+
 		for agent_num, agent in enumerate(swarm):
+
 			if agent.active == 0:
+
 				polled = random.choice(swarm)
+
 				if polled.active > 0:
+
 					agent.hypothesis = polled.hypothesis
-					if agent.hypothesis == XY(1000,1000) and swarm_name == 'B-xgt0':
-						print("agent",agent_num,"in swarm",swarm_name,"diffuses ",agent.hypothesis)
-					#agent.active = polled.active # DIFFUSION
+
+					#agent.active = polled.active # DIFFUSION OF QUORUM COUNT
+
 				else:
+
 					agent.hypothesis = hyp_function(random)
-					if agent.hypothesis == XY(1000,1000) and swarm_name == 'B-xgt0':
-						print("agent",agent_num,"in swarm",swarm_name,"generates ",agent.hypothesis)
 
 		#test
-		quorum_test_phase(swarm_name, swarm, previous_swarms, quorum_threshold, microtest, random)
+		quorum_test_phase(
+			swarm,
+			previous_swarms,
+			quorum_threshold,
+			microtest,
+			random,)
 
-		agents = [(agent.hypothesis, agent.active) for agent in swarm]
-		#print(swarm_name,agents)
+	# Halting condition
 	halt_swarm = next(swarm for name,swarm,_,_,_ in solution if name == 'halt')
+
+	# Halt if there are any quorate agents in the halt swarm
 	return any(x.active >= quorum_threshold for x in halt_swarm)
 @
 
 \subsection{Quorum execute}
 <<multi-swarm-solution.py>>=
-def do_quorum_sensing_solution(quorum_threshold):
-
-	solution = quorum_build_solution(state_table,initial_x=1000,initial_y=100,agent_count=5,quorum_threshold=quorum_threshold)
-
-	for repeat in itertools.count(): #range(10000):
-		if quorum_iterate(solution[1:], quorum_threshold):
-			print('Finished at iteration {r}. Answer is {a}.'.format(
-				r=repeat,
-				a=next(agent for agent in next(swarm for name,swarm,_,_,_ in solution if name == 'halt') if agent.active >= quorum_threshold).hypothesis.y
-			))
-			break
-		if repeat % 1 == 0:
-			print("Iteration",repeat)
-		for name,swarm,_,_,_ in solution:
-			print(name,[(agent.hypothesis, agent.active) for agent in swarm])
-
+def `print_swarms(solution):
 	for name,swarm,_,_,_ in solution:
 		print(name,[(agent.hypothesis, agent.active) for agent in swarm])
 
 
+def `do_quorum_sensing_solution(quorum_threshold):
+
+	solution = quorum_build_solution(
+		state_table,
+		initial_x=1000,
+		initial_y=100,
+		agent_count=5,
+		quorum_threshold=quorum_threshold,)
+
+	for repeat in itertools.count():
+		if quorum_iterate(solution[1:], quorum_threshold):
+
+			halt_swarm = next(
+				swarm
+				for name,swarm,_,_,_
+				in solution
+				if name == 'halt')
+
+			print('Finished at iteration {r}. Answer is {a}.'.format(
+				r=repeat,
+				a=next(
+					agent 
+					for agent
+					in halt_swarm
+					if agent.active >= quorum_threshold
+				).hypothesis.y
+			))
+
+			break
+
+	print_swarms(solution)
+
+
 do_quorum_sensing_solution(quorum_threshold=3)
 @
+
+\subsection{Quorum summary pseudocode}
+
+<<pseudo quorum sensing>>=
+Do until an agent in the halt swarm hits quorum
+
+	For each swarm
+
+		For each agent # Diffusion phase
+
+			if agent's quorum count is 0
+
+				poll an agent from the same swarm
+
+				if polled agent's quorum count > 0
+
+					polling agent copies hypothesis from polled agent
+
+					# Maybe also copies quorum count
+
+				else
+
+					polling agent generates random hypothesis by polling a
+					random agent from a random linked swarm and copying the
+					hypothesis with peturbation.
+
+		For each agent # Test phase
+
+			poll an agent from a linked swarm
+
+			if polling agent has not hit quorum threshold
+
+				if polled agent has hit quorum threshold
+
+					if polling agent's registers are accurate
+
+						agent increments quorum count
+
+					else
+
+						agent sets quorum count to zero
+
+			else:
+
+				polled agent's quorum count becomes zero
+@
+
 
 \appendix{}
 
