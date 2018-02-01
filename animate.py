@@ -74,7 +74,7 @@ def randcolor():
 		in range(6)
 	)
 
-colors = [randcolor() for x in range(1000)]
+colors = [randcolor() for x in range(2000)]
 	#'tomato',#0 redish
 	#'SkyBlue1',#1 bluish
 	#'olive drab', #2 greenish
@@ -87,7 +87,7 @@ colors = [randcolor() for x in range(1000)]
 
 class Application(tk.Frame):
 
-	def __init__(self, master, width, height, modern=True, from_file=False):
+	def __init__(self, master, width, height, modern, from_file,quorum_threshold):
 
 		tk.Frame.__init__(self, master)
 
@@ -102,6 +102,8 @@ class Application(tk.Frame):
 		self.modern = modern
 
 		self.halt = False
+
+		self.quorum_threshold = quorum_threshold
 
 		if self.modern:
 			self.input_file_name = 'multi-swarm-animation.json'
@@ -133,7 +135,7 @@ class Application(tk.Frame):
 						in random.choice(data)[2]]
 		else:
 
-			animation = turing_sds.get_anim(x=100,y=100,quorum_threshold=3)
+			animation = turing_sds.get_anim(x=100,y=100,quorum_threshold=quorum_threshold,max_iterations=None)
 			iterations = (x for x in animation)
 
 			print("Iteration count",len(animation))
@@ -308,9 +310,9 @@ class Application(tk.Frame):
 
 		self.update_network()
 
-		self.draw_network(self.framecount)
+		self.draw_network(self.framecount, self.quorum_threshold)
 
-		self.frames_per_second = 3
+		self.frames_per_second = 60
 
 		delay = int(1000/self.frames_per_second)
 
@@ -322,7 +324,7 @@ class Application(tk.Frame):
 
 		#self.canvas.postscript(file="frames/file_name_{fc:03}.ps".format(fc=self.framecount), colormode='color')
 
-	def draw_network(self, framecount):
+	def draw_network(self, framecount, quorum_threshold):
 
 		try:
 			self.canvas.delete(self.frame_text)
@@ -340,7 +342,7 @@ class Application(tk.Frame):
 
 		for swarm in self.swarms:
 			
-			self.draw_swarm(swarm)
+			self.draw_swarm(swarm, quorum_threshold)
 
 		for arrow in self.arrows:
 			self.draw_arrow(arrow)
@@ -363,14 +365,14 @@ class Application(tk.Frame):
 				width=linewidth,
 			)
 
-	def draw_swarm(self, swarm):
+	def draw_swarm(self, swarm, quorum_threshold):
 
 		self.draw_swarm_box(swarm)
 		self.draw_swarm_label(swarm)
 		for agent in swarm.agents:
-			self.draw_agent(agent)
+			self.draw_agent(agent, quorum_threshold)
 
-	def draw_agent(self, agent):
+	def draw_agent(self, agent, quorum_threshold):
 
 		try:
 			self.canvas.delete(agent.oval)
@@ -380,7 +382,7 @@ class Application(tk.Frame):
 		if agent.active:
 			l_fill = colors[agent.hyp.x]
 			r_fill = colors[agent.hyp.y]
-			if agent.active < 3:
+			if agent.active < quorum_threshold:
 				stipple = "gray50"
 			else:
 				stipple = None
@@ -489,6 +491,7 @@ app = Application(
 	width=1080,
 	height=1080,
 	modern=True,
-	from_file=False,)
+	from_file=False,
+	quorum_threshold=2,)
 
 root.mainloop()

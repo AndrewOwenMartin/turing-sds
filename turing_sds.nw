@@ -800,20 +800,15 @@ def `quorum_test_phase(
 
 		polled = random.choice(random_swarm)
 
-		if agent.active < quorum_threshold:
+		if polled.active >= quorum_threshold:
 
-			if polled.active >= quorum_threshold:
+			if swarm_test_function(agent, polled):
 
-				if swarm_test_function(agent, polled):
+				agent.active += 1
 
-					agent.active += 1
+			else:
 
-				else:
-
-					agent.active = 0
-		else:
-
-			polled.active = 0
+				agent.active = 0
 @
 
 \subsection{Quorum microtest}
@@ -970,19 +965,26 @@ def `quorum_iterate(solution, quorum_threshold):
 
 		for agent_num, agent in enumerate(swarm):
 
+
 			if agent.active == 0:
 
-				polled = random.choice(swarm)
+				local_polled = random.choice(swarm)
 
-				if polled.active > 0:
+				if local_polled.active > 0:
 
-					agent.hypothesis = polled.hypothesis
-
-					#agent.active = polled.active # DIFFUSION OF QUORUM COUNT
+					agent.hypothesis = local_polled.hypothesis
 
 				else:
 
 					agent.hypothesis = hyp_function(random)
+
+			elif agent.active >= quorum_threshold:
+
+				random_linked_swarm = random.choice(previous_swarms)
+
+				linked_polled = random.choice(random_linked_swarm)
+
+				linked_polled.active = 0
 
 		#test
 		quorum_test_phase(
@@ -1028,7 +1030,12 @@ def `solution_to_json(solution):
 	)
 
 
-def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2):
+def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2,max_iterations=None):
+
+	if max_iterations is None:
+		repeat_generator = itertools.count()
+	else:
+		repeat_generator = range(max_iterations)
 
 	solution = quorum_build_solution(
 		state_table,
@@ -1039,7 +1046,7 @@ def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2):
 
 	iteration_states = []
 
-	for repeat in itertools.count():
+	for repeat in repeat_generator:
 
 		iteration_states.append(solution_to_json(solution))
 
@@ -1069,7 +1076,7 @@ def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2):
 	return iteration_states
 
 def get_anim(x,y,quorum_threshold):
-	animation = do_quorum_sensing_solution(quorum_threshold, x, y)
+	animation = do_quorum_sensing_solution(quorum_threshold, x, y,max_iterations=None)
 	return animation
 
 if __name__ == "__main__":
@@ -1088,7 +1095,7 @@ if __name__ == "__main__":
 		#json.dump(animations,f)
 @
 
-\subsection{Quorum summary pseudocode}
+\subsection{OLD Quorum summary pseudocode}
 <<pseudo quorum sensing>>=
 Do until an agent in the halt swarm hits quorum
 
@@ -1135,6 +1142,46 @@ Do until an agent in the halt swarm hits quorum
 				polled agent's quorum count becomes zero
 @
 
+\subsection{Quorum summary pseudocode}
+<<pseudo quorum sensing 2>>=
+Do until an agent in the halt swarm hits quorum
+
+	For each agent in swarm # Diffusion phase
+
+		remotely poll and agent from a random linked swarm
+
+		if agent's quorum count is 0 # polling is inactive
+
+			locally poll an agent from the same swarm
+
+			if local_polled agent's quorum count > 0 # local_polled is active
+
+				agent copies hypothesis from local_polled agent
+
+			else
+
+				agent generates random hypothesis by copying the
+				hypothesis, with peturbation, of remotely polled agent.
+
+		else if agent has hit quorum threshold
+
+			remotely polled agent's quorum count becomes zero
+
+	For each agent in swarm # Test phase
+
+		remotely poll a random agent from a random linked swarm
+
+		if remotely polled agent has hit quorum threshold
+
+			if agent's registers are accurate
+
+				agent increments quorum count
+
+			else
+
+				agent sets quorum count to zero
+@
+
 
 \appendix{}
 
@@ -1147,288 +1194,3 @@ Do until an agent in the halt swarm hits quorum
 \nowebchunks{}
 
 \end{document}
-
-\section{New script}
-<<new script>>=
-<<dependencies>>
-<<hypothesis>>
-<<perturbations>>
-<<turing swarm>>
-<<new hypothesis function>>
-<<microtest function>>
-<<turing swarms>>
-<<initialise swarms>>
-<<asynchronous execution>>
-<<synchronous execution>>
-<<action>>
-@
-
-\section{Hypothesis}
-<<hypothesis>>=
-XY = namedtuple('XY',('x','y'))
-@
-
-<<dependencies>>=
-from collections import namedtuple
-@
-
-\section{perturbations}
-<<perturbations>>=
-noop = lambda xy: xy
-incx = lambda xy: XY(xy.x+1, xy.y)
-decx = lambda xy: XY(max(0,xy.x-1), xy.y)
-incy = lambda xy: XY(xy.x, xy.y+1)
-decy = lambda xy: XY(xy.x, max(0,xy.y-1))
-
-perturbations = (noop, incx, decx, incy, decy)
-@
-
-\section{Turing Swarm}
-<<turing swarm>>=
-class TuringSwarm:
-
-	def __init__(self, agent_count):
-
-		self.agents = sds.Agent.initialise(agent_count)
-
-	def link(self, swarms):
-
-		self.links = swarms
-
-		self.new_hyp_fun = functools.partial(
-			generic_new_hyp_function,
-			linked_swarms=self.links,
-		)
-
-		self.microtest = [
-			functools.partial(
-				generic_microtest,
-				action=self.action,
-				linked_swarms=self.links,
-			)
-		]
-@
-
-<<dependencies>>=
-import sds
-import functools
-@
-
-\section{Generic New Hypothesis Function}
-<<new hypothesis function>>=
-def generic_new_hyp_function(random, linked_swarms):
-
-	polled_swarm = random.choice(linked_swarms)
-
-	polled_agent = random.choice(polled_swarm.agents)
-
-	polled_hypothesis = polled_agent.hypothesis
-
-	random_perturbation = random.choice(perturbations)
-
-	return random_perturbation(polled_hypothesis)
-@
-
-<<dependencies>>=
-import random
-@
-
-\section{Generic Microtest Function}
-
-If you don't require your polled agent to be active, then the initialisation swarm will always be fully active, which dominates the execution.
-
-<<microtest function>>=
-def generic_microtest(hypothesis, action, linked_swarms):
-
-	polled_swarm = random.choice(linked_swarms)
-
-	polled_agent = random.choice(polled_swarm.agents)
-
-	polled_hypothesis = polled_agent.hypothesis
-
-	modified_hypothesis = action(polled_hypothesis)
-
-	return (
-		(modified_hypothesis is not None)
-		and (modified_hypothesis == hypothesis)
-	)
-@
-
-\section{Turing Swarm definitions}
-<<turing swarms>>=
-<<init>>
-<<halt>>
-<<xgt0>>
-<<xeq0>>
-<<incx>>
-<<decx>>
-<<incy>>
-<<decy>>
-@
-
-\subsection{Init swarm}
-<<init>>=
-class Init(TuringSwarm):
-
-	def __init__(self, agent_count, initial_hyp):
-
-		super().__init__(agent_count)
-
-		self.new_hyp_fun = lambda random: initial_hyp
-
-		self.microtest = [lambda hyp: hyp == initial_hyp]
-@
-
-\subsection{Halt swarm}
-<<halt>>=
-class Halt(TuringSwarm):
-
-	def action(self, hyp):
-		return noop(hyp)
-@
-
-\subsection{$X > 0$ swarm}
-<<xgt0>>=
-class XGt0(TuringSwarm):
-
-	def action(self, hyp):
-		if hyp.x > 0:
-			return hyp
-		else:
-			return None
-@
-
-\subsection{$X = 0$ swarm}
-<<xeq0>>=
-class XEq0(TuringSwarm):
-
-	def action(self, hyp):
-		if hyp.x == 0:
-			return hyp
-		else:
-			return None
-@
-
-\subsection{Inc X swarm}
-<<incx>>=
-class IncX(TuringSwarm):
-
-	def action(self, hyp):
-		return incx(hyp)
-@
-
-\subsection{Dec X swarm}
-<<decx>>=
-class DecX(TuringSwarm):
-
-	def action(self, hyp):
-		return decx(hyp)
-@
-
-\subsection{Inc Y swarm}
-<<incy>>=
-class IncY(TuringSwarm):
-
-	def action(self, hyp):
-		return incy(hyp)
-@
-
-\subsection{Dec Y swarm}
-<<decy>>=
-class DecY(TuringSwarm):
-
-	def action(self, hyp):
-		return decy(hyp)
-@
-
-\section{Initialise swarms}
-<<initialise swarms>>=
-def initialise_swarms(swarms):
-	for swarm in swarms:
-		for agent in swarm.agents:
-			agent.hypothesis = XY(
-				x=random.randint(0,9),
-				y=random.randint(0,9),)
-@
-
-\section{Asynchronous Execution}
-<<asynchronous execution>>=
-def asynchronous_execution(swarms, max_iterations):
-
-	swarm_names = ('init','X>0','decX','incY','X==0','halt')
-
-	named_swarms = list(zip(swarm_names,swarms))
-
-	for iteration in range(max_iterations):
-
-		for name, swarm in random.sample(named_swarms,len(named_swarms)):
-
-			sds.passive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
-
-			sds.test_phase(swarm.agents, swarm.microtest, random)
-
-		active_counts = [
-			Counter(tuple(agent.hypothesis) for agent in swarm.agents if agent.active).most_common(2)
-			for swarm
-			in swarms
-		]
-
-		print("{x:2}".format(x=iteration+1), list(zip(swarm_names,active_counts)))
-@
-
-\section{Synchronous Execution}
-<<synchronous execution>>=
-def synchronous_execution(swarms, max_iterations):
-
-	swarm_names = ('init','X>0','decX','incY','X==0','halt')
-
-	for iteration in range(max_iterations):
-
-		for swarm in swarms:
-
-			sds.context_sensitive_diffusion(swarm.agents, random, swarm.new_hyp_fun)
-
-		for swarm in swarms:
-
-			sds.test_phase(swarm.agents, swarm.microtest, random)
-
-		active_counts = [
-			Counter(tuple(agent.hypothesis) for agent in swarm.agents if agent.active).most_common(2)
-			for swarm
-			in swarms
-		]
-
-		print("{x:2}".format(x=iteration+1), list(zip(swarm_names,active_counts)))
-		#print("{x:2}".format(x=iteration+1), 'x>0',active_counts[1])
-		#print("{x:2}".format(x=iteration+1), )
-@
-
-<<dependencies>>=
-from pprint import pprint
-from collections import Counter
-@
-
-\section{Action}
-<<action>>=
-my_init = Init(agent_count=100, initial_hyp=XY(2,3))
-my_xgt0 = XGt0(agent_count=100)
-my_xeq0 = XEq0(agent_count=100)
-my_halt = Halt(agent_count=100)
-my_decx = DecX(agent_count=100)
-my_incy = IncY(agent_count=100)
-
-my_xgt0.link((my_init, my_incy))
-my_xeq0.link((my_init, my_incy))
-my_halt.link((my_xeq0,))
-my_decx.link((my_xgt0,))
-my_incy.link((my_decx,))
-
-swarms = [ my_init, my_xgt0, my_decx, my_incy, my_xeq0, my_halt]
-
-initialise_swarms(swarms)
-
-synchronous_execution(swarms,max_iterations=500)
-print('Done')
-@
-
-
