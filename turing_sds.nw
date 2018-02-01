@@ -360,7 +360,7 @@ Before doing any of the other functions, we have to have a function to probabili
 
 <<>>=
 def perturb(register): #PERTURB
-	return register + random.choice((1,0,-1))
+	return register + random.choice((1,0,0,0,-1))
 @
 
 This is for `\(x > 0\)' swarm.
@@ -796,6 +796,10 @@ def `quorum_test_phase(
 ):
 	for agent_num, agent in enumerate(swarm):
 
+		if agent.active == 2:
+
+			continue
+
 		random_swarm = random.choice(linked_swarms)
 
 		polled = random.choice(random_swarm)
@@ -804,7 +808,7 @@ def `quorum_test_phase(
 
 			if swarm_test_function(agent, polled):
 
-				agent.active += 1
+				agent.active = 1
 
 			else:
 
@@ -963,8 +967,8 @@ def `quorum_iterate(solution, quorum_threshold):
 
 	for swarm_name, swarm, microtest, hyp_function, previous_swarms in solution:
 
+		# Quorum diffusion
 		for agent_num, agent in enumerate(swarm):
-
 
 			if agent.active == 0:
 
@@ -977,6 +981,16 @@ def `quorum_iterate(solution, quorum_threshold):
 				else:
 
 					agent.hypothesis = hyp_function(random)
+
+			elif agent.active == 1:
+
+				local_polled = random.choice(swarm)
+
+				if local_polled.active >= 1:
+
+					#print('agent',agent_num,'goes quorate',)
+
+					agent.active = 2
 
 			elif agent.active >= quorum_threshold:
 
@@ -1046,7 +1060,9 @@ def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2,max_ite
 
 	iteration_states = []
 
-	for repeat in repeat_generator:
+	for num, repeat in enumerate(repeat_generator):
+
+		#print(num)
 
 		iteration_states.append(solution_to_json(solution))
 
@@ -1075,17 +1091,18 @@ def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2,max_ite
 
 	return iteration_states
 
-def get_anim(x,y,quorum_threshold):
-	animation = do_quorum_sensing_solution(quorum_threshold, x, y,max_iterations=None)
+def get_anim(x,y,quorum_threshold,max_iterations):
+	animation = do_quorum_sensing_solution(quorum_threshold, x, y,max_iterations=max_iterations)
 	return animation
 
 if __name__ == "__main__":
 	animations = []
-	for animation_count in range(20):
+	for animation_count in range(1):
 		animation = do_quorum_sensing_solution(
-			initial_x=100,
-			initial_y=100,
-			quorum_threshold=3,)
+			initial_x=1000,
+			initial_y=1000,
+			quorum_threshold=2,
+			max_iterations=None,)
 		animations.append((animation_count,animation))
 
 	with open('multi-swarm-animation.json','w') as f:
