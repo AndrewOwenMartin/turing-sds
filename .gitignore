@@ -4,7 +4,10 @@
 *.log
 *.out
 *.pdf
-*.py
+!animate.py
 *.tex
 *.toc
 __pycache__
+two_agent_solution.py
+run_two_agent_solution.py
+multi_swarm_solution.py

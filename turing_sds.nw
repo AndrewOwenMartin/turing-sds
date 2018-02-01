@@ -11,7 +11,7 @@
 \setlength{\parskip}{1em}
 
 % Default Geometry
-\usepackage[a4paper]{geometry}
+\usepackage[a4paper,bottom=1in]{geometry}
 % \usepackage[margin=0.5in, paperwidth=14.15in, paperheight=11.25in]{geometry} % 1280 x 1024 Monitor reading
 % \usepackage[margin=0.5in, paperwidth=16.5in, paperheight=9.25in]{geometry} % 1600 x 900 Monitor reading (ThinkPad)
 % \usepackage[margin=0.5in, paperwidth=19.9in, paperheight=11.1in]{geometry} % 1920 x 1080 Monitor reading (MultiSync EA234WMi)
@@ -295,6 +295,7 @@ from collections import namedtuple
 import functools
 import sys
 import itertools
+import json
 
 XY = namedtuple('XY',['x','y'])
 
@@ -1000,21 +1001,48 @@ def `quorum_iterate(solution, quorum_threshold):
 
 \subsection{Quorum execute}
 <<multi-swarm-solution.py>>=
-def `print_swarms(solution):
-	for name,swarm,_,_,_ in solution:
-		print(name,[(agent.hypothesis, agent.active) for agent in swarm])
+def `report_swarms(solution):
+	return tuple(
+		(
+			name,tuple((agent.hypothesis, agent.active)
+			for agent
+			in swarm)
+		)
+		for name,swarm,_,_,_
+		in solution
+	)
+
+# (('A-init', ((XY(x=3, y=2), 0), (XY(x=3, y=2), 0), (XY(x=3, y=2), 0), (XY(x=3, y=2), 0), (XY(x=3, y=2), 0))), ('B-xgt0', ((XY(x=0, y=5), 0), (XY(x=4, y=2), 0), (XY(x=3, y=1), 0), (XY(x=2, y=3), 0), (XY(x=2, y=1), 0))), ('C-decx', ((XY(x=4, y=3), 0), (XY(x=4, y=2), 0), (XY(x=1, y=2), 0), (XY(x=3, y=3), 0), (XY(x=1, y=2), 0))), ('D-incy', ((XY(x=4, y=3), 0), (XY(x=3, y=1), 0), (XY(x=0, y=5), 0), (XY(x=0, y=5), 0), (XY(x=4, y=4), 0))), ('E-xeq0', ((XY(x=0, y=5), 1), (XY(x=0, y=5), 2), (XY(x=0, y=5), 3), (XY(x=0, y=5), 3), (XY(x=0, y=5), 3))), ('halt', ((XY(x=0, y=5), 2), (XY(x=0, y=5), 3), (XY(x=0, y=5), 1), (XY(x=0, y=5), 2), (XY(x=0, y=5), 1))))
 
 
-def `do_quorum_sensing_solution(quorum_threshold):
+def `solution_to_json(solution):
+	return tuple(
+		(name,
+		tuple(
+			(agent.hypothesis.x, agent.hypothesis.y, agent.active)
+			for agent
+			in swarm
+		))
+		for name,swarm,_,_,_
+		in solution
+	)
+
+
+def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2):
 
 	solution = quorum_build_solution(
 		state_table,
-		initial_x=1000,
-		initial_y=100,
+		initial_x=initial_x,
+		initial_y=initial_y,
 		agent_count=5,
 		quorum_threshold=quorum_threshold,)
 
+	iteration_states = []
+
 	for repeat in itertools.count():
+
+		iteration_states.append(solution_to_json(solution))
+
 		if quorum_iterate(solution[1:], quorum_threshold):
 
 			halt_swarm = next(
@@ -1035,14 +1063,32 @@ def `do_quorum_sensing_solution(quorum_threshold):
 
 			break
 
-	print_swarms(solution)
+	print(report_swarms(solution))
+	print(solution_to_json(solution))
 
+	return iteration_states
 
-do_quorum_sensing_solution(quorum_threshold=3)
+def get_anim(x,y,quorum_threshold):
+	animation = do_quorum_sensing_solution(quorum_threshold, x, y)
+	return animation
+
+if __name__ == "__main__":
+	animations = []
+	for animation_count in range(20):
+		animation = do_quorum_sensing_solution(
+			initial_x=100,
+			initial_y=100,
+			quorum_threshold=3,)
+		animations.append((animation_count,animation))
+
+	with open('multi-swarm-animation.json','w') as f:
+		for animation in animations:
+			f.write(json.dumps(animation))
+			f.write("\n")
+		#json.dump(animations,f)
 @
 
 \subsection{Quorum summary pseudocode}
-
 <<pseudo quorum sensing>>=
 Do until an agent in the halt swarm hits quorum
 
@@ -1050,15 +1096,13 @@ Do until an agent in the halt swarm hits quorum
 
 		For each agent # Diffusion phase
 
-			if agent's quorum count is 0
+			if agent's quorum count is 0 # polling is inactive
 
 				poll an agent from the same swarm
 
 				if polled agent's quorum count > 0
 
 					polling agent copies hypothesis from polled agent
-
-					# Maybe also copies quorum count
 
 				else
 
@@ -1081,6 +1125,10 @@ Do until an agent in the halt swarm hits quorum
 					else
 
 						agent sets quorum count to zero
+
+				else
+
+					do nothing
 
 			else:
 
