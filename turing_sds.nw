@@ -1028,9 +1028,6 @@ def `report_swarms(solution):
 		in solution
 	)
 
-# (('A-init', ((XY(x=3, y=2), 0), (XY(x=3, y=2), 0), (XY(x=3, y=2), 0), (XY(x=3, y=2), 0), (XY(x=3, y=2), 0))), ('B-xgt0', ((XY(x=0, y=5), 0), (XY(x=4, y=2), 0), (XY(x=3, y=1), 0), (XY(x=2, y=3), 0), (XY(x=2, y=1), 0))), ('C-decx', ((XY(x=4, y=3), 0), (XY(x=4, y=2), 0), (XY(x=1, y=2), 0), (XY(x=3, y=3), 0), (XY(x=1, y=2), 0))), ('D-incy', ((XY(x=4, y=3), 0), (XY(x=3, y=1), 0), (XY(x=0, y=5), 0), (XY(x=0, y=5), 0), (XY(x=4, y=4), 0))), ('E-xeq0', ((XY(x=0, y=5), 1), (XY(x=0, y=5), 2), (XY(x=0, y=5), 3), (XY(x=0, y=5), 3), (XY(x=0, y=5), 3))), ('halt', ((XY(x=0, y=5), 2), (XY(x=0, y=5), 3), (XY(x=0, y=5), 1), (XY(x=0, y=5), 2), (XY(x=0, y=5), 1))))
-
-
 def `solution_to_json(solution):
 	return tuple(
 		(name,
@@ -1086,6 +1083,9 @@ def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2,max_ite
 
 			break
 
+	iteration_states.append(solution_to_json(solution))
+
+
 	print(report_swarms(solution))
 	print(solution_to_json(solution))
 
@@ -1099,8 +1099,8 @@ if __name__ == "__main__":
 	animations = []
 	for animation_count in range(1):
 		animation = do_quorum_sensing_solution(
-			initial_x=1000,
-			initial_y=1000,
+			initial_x=20,
+			initial_y=0,
 			quorum_threshold=2,
 			max_iterations=None,)
 		animations.append((animation_count,animation))

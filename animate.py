@@ -88,7 +88,7 @@ colors = [randcolor() for x in range(2000)]
 
 class Application(tk.Frame):
 
-	def __init__(self, master, width, height, modern, from_file,quorum_threshold, draw_hypotheses):
+	def __init__(self, master, width, height, modern, from_file,quorum_threshold, draw_hypotheses, x, y):
 
 		tk.Frame.__init__(self, master)
 
@@ -107,6 +107,10 @@ class Application(tk.Frame):
 		self.quorum_threshold = quorum_threshold
 
 		self.draw_hypotheses = draw_hypotheses
+
+		self.x = x
+
+		self.y = y
 
 		if self.modern:
 			self.input_file_name = 'multi-swarm-animation.json'
@@ -138,7 +142,7 @@ class Application(tk.Frame):
 						in random.choice(data)[2]]
 		else:
 
-			animation = turing_sds.get_anim(x=100,y=100,quorum_threshold=quorum_threshold,max_iterations=None)
+			animation = turing_sds.get_anim(x=self.x,y=self.y,quorum_threshold=quorum_threshold,max_iterations=None)
 			iterations = (x for x in animation)
 
 			print("Iteration count",len(animation))
@@ -512,6 +516,8 @@ app = Application(
 	modern=True,
 	from_file=False,
 	quorum_threshold=2,
-	draw_hypotheses=False)
+	draw_hypotheses=False,
+	x=10,
+	y=10,)
 
 root.mainloop()
