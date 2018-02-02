@@ -1077,7 +1077,7 @@ def `do_quorum_sensing_solution(quorum_threshold,initial_x=3,initial_y=2,max_ite
 			print('Finished at iteration {r}. Answer is {a}.'.format(
 				r=repeat,
 				a=next(
-					agent 
+					agent
 					for agent
 					in halt_swarm
 					if agent.active >= quorum_threshold
@@ -1165,13 +1165,11 @@ Do until an agent in the halt swarm hits quorum
 
 	For each agent in swarm # Diffusion phase
 
-		remotely poll and agent from a random linked swarm
+		if agent is inactive
 
-		if agent's quorum count is 0 # polling is inactive
+			poll an agent from local swarm
 
-			locally poll an agent from the same swarm
-
-			if local_polled agent's quorum count > 0 # local_polled is active
+			if locally polled is active or quorate
 
 				agent copies hypothesis from local_polled agent
 
@@ -1180,23 +1178,35 @@ Do until an agent in the halt swarm hits quorum
 				agent generates random hypothesis by copying the
 				hypothesis, with peturbation, of remotely polled agent.
 
-		else if agent has hit quorum threshold
+		else if agent is active
 
-			remotely polled agent's quorum count becomes zero
+			locally poll an agent from the same swarm
+
+			if locally polled is active or quorate
+
+				agent becomes quorate
+
+		else if agent is quorate
+
+			remotely polled agent becomes inactive
 
 	For each agent in swarm # Test phase
 
+		if agent is quorate
+
+			continue
+
 		remotely poll a random agent from a random linked swarm
 
-		if remotely polled agent has hit quorum threshold
+		if remotely polled agent is quorate
 
 			if agent's registers are accurate
 
-				agent increments quorum count
+				agent becomes active
 
 			else
 
-				agent sets quorum count to zero
+				agent becomes inactive
 @
 
 

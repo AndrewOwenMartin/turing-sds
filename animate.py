@@ -63,7 +63,8 @@ my_fill="darkblue"
 swarm_label_font="Sans 20"
 agent_label_font="Sans 16"
 inactive_fill="dark gray"
-active_fill="yellow"
+active_fill="#666600"
+quorate_fill="yellow"
 swarm_fill="light gray"
 background_fill="gray"
 linewidth=5
@@ -87,7 +88,7 @@ colors = [randcolor() for x in range(2000)]
 
 class Application(tk.Frame):
 
-	def __init__(self, master, width, height, modern, from_file,quorum_threshold):
+	def __init__(self, master, width, height, modern, from_file,quorum_threshold, draw_hypotheses):
 
 		tk.Frame.__init__(self, master)
 
@@ -104,6 +105,8 @@ class Application(tk.Frame):
 		self.halt = False
 
 		self.quorum_threshold = quorum_threshold
+
+		self.draw_hypotheses = draw_hypotheses
 
 		if self.modern:
 			self.input_file_name = 'multi-swarm-animation.json'
@@ -320,7 +323,7 @@ class Application(tk.Frame):
 
 			self.after(delay, self.draw)
 
-			print('drawing again after ',delay)
+			#print('drawing again after ',delay)
 
 		#self.canvas.postscript(file="frames/file_name_{fc:03}.ps".format(fc=self.framecount), colormode='color')
 
@@ -375,7 +378,17 @@ class Application(tk.Frame):
 	def draw_agent(self, agent, quorum_threshold):
 
 		try:
-			self.canvas.delete(agent.oval)
+			self.canvas.delete(agent.left_arc)
+		except AttributeError:
+			pass
+
+		try:
+			self.canvas.delete(agent.right_arc)
+		except AttributeError:
+			pass
+
+		try:
+			self.canvas.delete(agent.activity_oval)
 		except AttributeError:
 			pass
 
@@ -386,42 +399,49 @@ class Application(tk.Frame):
 				stipple = "gray50"
 			else:
 				stipple = None
+			activity_fill = active_fill
 
 		else:
 			l_fill = inactive_fill
 			r_fill = inactive_fill
 			stipple = None
+			activity_fill = inactive_fill
 
+		if agent.active == 2:
+			activity_fill = quorate_fill
 
-		#agent.oval = self.canvas.create_oval(
-		#	agent.left*self.width,
-		#	agent.top*self.height,
-		#	agent.right*self.width,
-		#	agent.bottom*self.height,
-		#	stipple=stipple,
-		#	fill=l_fill)
+		if self.draw_hypotheses:
 
-		agent.oval = self.canvas.create_arc(
-			agent.left*self.width,
-			agent.top*self.height,
-			agent.right*self.width,
-			agent.bottom*self.height,
-			stipple=stipple,
-			fill=l_fill,
-			start=90,
-			extent=180,
-			outline='')
+			agent.left_arc = self.canvas.create_arc(
+				agent.left*self.width,
+				agent.top*self.height,
+				agent.right*self.width,
+				agent.bottom*self.height,
+				stipple=stipple,
+				fill=l_fill,
+				start=90,
+				extent=180,
+				outline='')
 
-		agent.oval = self.canvas.create_arc(
-			agent.left*self.width,
-			agent.top*self.height,
-			agent.right*self.width,
-			agent.bottom*self.height,
-			stipple=stipple,
-			fill=r_fill,
-			start=-90,
-			extent=180,
-			outline='')
+			agent.right_arc = self.canvas.create_arc(
+				agent.left*self.width,
+				agent.top*self.height,
+				agent.right*self.width,
+				agent.bottom*self.height,
+				stipple=stipple,
+				fill=r_fill,
+				start=-90,
+				extent=180,
+				outline='')
+
+		else:
+
+			agent.activity_oval = self.canvas.create_oval(
+				agent.left*self.width,
+				agent.top*self.height,
+				agent.right*self.width,
+				agent.bottom*self.height,
+				fill=activity_fill,)
 
 		try:
 			self.canvas.delete(agent.label)
@@ -492,6 +512,7 @@ app = Application(
 	height=1080,
 	modern=True,
 	from_file=False,
-	quorum_threshold=2,)
+	quorum_threshold=2,
+	draw_hypotheses=False)
 
 root.mainloop()
