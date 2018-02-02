@@ -49,7 +49,7 @@ class Agent:
 		self.bottom = y + agent_dia
 
 class Arrow:
-	
+
 	def __init__(self,coords):
 		self.coords=coords
 
@@ -143,7 +143,7 @@ class Application(tk.Frame):
 
 			print("Iteration count",len(animation))
 
-			self.iteration_generator = enumerate(x for x in iterations)
+		self.iteration_generator = enumerate(x for x in iterations)
 
 
 		self.swarms = [
@@ -276,7 +276,7 @@ class Application(tk.Frame):
 		print(iteration_num)
 
 		if modern:
-			
+
 			for display_swarm, (name, hypotheses) in zip(self.swarms,iteration):
 				for agent, (x,y,c) in zip(display_swarm.agents,hypotheses):
 					if x < 0:
@@ -344,7 +344,7 @@ class Application(tk.Frame):
 		)
 
 		for swarm in self.swarms:
-			
+
 			self.draw_swarm(swarm, quorum_threshold)
 
 		for arrow in self.arrows:
@@ -407,10 +407,18 @@ class Application(tk.Frame):
 			stipple = None
 			activity_fill = inactive_fill
 
-		if agent.active == 2:
+		if agent.active == 1:
+
 			activity_fill = quorate_fill
 
-		if self.draw_hypotheses:
+			agent.activity_oval = self.canvas.create_oval(
+				agent.left*self.width,
+				agent.top*self.height,
+				agent.right*self.width,
+				agent.bottom*self.height,
+				fill=activity_fill,)
+
+		else:
 
 			agent.left_arc = self.canvas.create_arc(
 				agent.left*self.width,
@@ -434,15 +442,6 @@ class Application(tk.Frame):
 				extent=180,
 				outline='')
 
-		else:
-
-			agent.activity_oval = self.canvas.create_oval(
-				agent.left*self.width,
-				agent.top*self.height,
-				agent.right*self.width,
-				agent.bottom*self.height,
-				fill=activity_fill,)
-
 		try:
 			self.canvas.delete(agent.label)
 		except AttributeError:
@@ -460,7 +459,7 @@ class Application(tk.Frame):
 				y=agent.hyp.y,)
 		)
 
-		
+
 
 	def draw_swarm_box(self, swarm):
 
