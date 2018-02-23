@@ -7,7 +7,7 @@ from collections import namedtuple
 
 class Swarm:
 
-	def __init__(self,x,y,name):
+	def __init__(self,x,y,name,swarm_height, agent_count, agent_dia):
 		self.x = x
 		self.y = y
 		self.name = name
@@ -27,6 +27,7 @@ class Swarm:
 					y=self.top+(0.5*agent_dia),
 					hyp=Hyp(random.randint(0,9),random.randint(0,9)),
 					active=False,
+					agent_dia=agent_dia,
 				)
 			)
 
@@ -38,7 +39,7 @@ class Hyp:
 
 class Agent:
 
-	def __init__(self,x,y,hyp,active):
+	def __init__(self,x,y,hyp,active, agent_dia):
 		self.x=x
 		self.y=y
 		self.hyp=hyp
@@ -53,18 +54,14 @@ class Arrow:
 	def __init__(self,coords):
 		self.coords=coords
 
-agent_count = 5
-
 swarm_width = 1/3
-agent_dia = swarm_width/agent_count
-swarm_height = agent_dia*2
 v_space = 0.025
 my_fill="darkblue"
 swarm_label_font="Sans 20"
-agent_label_font="Sans 16"
+agent_label_font="Sans 8"
 inactive_fill="dark gray"
-active_fill="#666600"
-quorate_fill="yellow"
+active_fill="yellow"
+quorate_fill="green"
 swarm_fill="light gray"
 background_fill="gray"
 linewidth=5
@@ -89,7 +86,7 @@ colors = [randcolor() for x in range(2000)]
 
 class Application(tk.Frame):
 
-	def __init__(self, master, width, height, modern, from_file,quorum_threshold, draw_hypotheses, frame_rate, frame_skip, x, y):
+	def __init__(self, master, width, height, frame_rate, frame_skip):
 
 		tk.Frame.__init__(self, master)
 
@@ -101,67 +98,44 @@ class Application(tk.Frame):
 
 		self.height = height
 
-		self.modern = modern
-
 		self.halt = False
-
-		self.quorum_threshold = quorum_threshold
-
-		self.draw_hypotheses = draw_hypotheses
 
 		self.frame_rate = frame_rate
 
 		self.frame_skip = frame_skip
 
-		self.x = x
+		self.input_file_name = 'multi-swarm-animation.json'
 
-		self.y = y
+		with open(self.input_file_name,'r') as file:
+			print('attempting to load',self.input_file_name)
+			data = []
+			for line in file.readlines():
+				data.append(json.loads(line))
+			metadata, repeat = random.choice(data)
+			print('randomly chose repeat',metadata['num'])
+			iterations = [
+				x
+				for x
+				in repeat
+			]
 
-		if self.modern:
-			self.input_file_name = 'multi-swarm-animation.json'
-		else:
-			self.input_file_name = 'json_animation.json'
+		self.agent_count = metadata['agent count']
 
-		if from_file:
+		self.agent_dia = swarm_width/self.agent_count
+		
+		self.swarm_height = self.agent_dia * 2
 
-			with open(self.input_file_name,'r') as file:
-				print('attempting to load',self.input_file_name)
-				if self.modern:
-					data = []
-					for line in file.readlines():
-						data.append(json.loads(line))
-				else:
-					data = json.load(file)
-				repeat_num, repeat = random.choice(data)
-				print('randomly chose repeat',repeat_num)
-				if self.modern:
-					iterations = [
-						x
-						for x
-						in repeat
-					]
-				else:
-					iterations = [
-						x[2]
-						for x
-						in random.choice(data)[2]]
-		else:
-
-			animation = turing_sds.get_anim(x=self.x,y=self.y,quorum_threshold=quorum_threshold,max_iterations=None)
-			iterations = (x for x in animation)
-
-			print("Iteration count",len(animation))
+		self.quorum_threshold = metadata['quorum threshold']
 
 		self.iteration_generator = enumerate(x for x in iterations)
 
-
 		self.swarms = [
-			Swarm( 0.5,  0+(v_space*1),'Init'),   #0 -> 0
-			Swarm(0.75,0.2+(v_space*2),'x>0'),    #2 -> 1
-			Swarm(0.75,0.4+(v_space*3),'Dec(x)'), #3 -> 2
-			Swarm(0.75,0.6+(v_space*4),'Inc(y)'), #4 -> 3
-			Swarm(0.25,0.2+(v_space*2),'x=0'),    #1 -> 4
-			Swarm(0.25,0.4+(v_space*3),'Halt'),   #5 -> 5
+			Swarm( 0.5,  0+(v_space*1),'Init', self.swarm_height, self.agent_count, self.agent_dia),   #0 -> 0
+			Swarm(0.75,0.2+(v_space*2),'x>0', self.swarm_height, self.agent_count, self.agent_dia),    #2 -> 1
+			Swarm(0.75,0.4+(v_space*3),'Dec(x)', self.swarm_height, self.agent_count, self.agent_dia), #3 -> 2
+			Swarm(0.75,0.6+(v_space*4),'Inc(y)', self.swarm_height, self.agent_count, self.agent_dia), #4 -> 3
+			Swarm(0.25,0.2+(v_space*2),'x=0', self.swarm_height, self.agent_count, self.agent_dia),    #1 -> 4
+			Swarm(0.25,0.4+(v_space*3),'Halt', self.swarm_height, self.agent_count, self.agent_dia),   #5 -> 5
 		]
 
 		bottom_of_init = (
@@ -222,22 +196,22 @@ class Application(tk.Frame):
 
 		left_of_incy_upper = (
 			self.swarms[3].left,
-			self.swarms[3].top+(swarm_height/4)
+			self.swarms[3].top+(self.swarm_height/4)
 		)
 
 		bit_left_of_incy_upper = (
 			self.swarms[3].left-(1/24),
-			self.swarms[3].top+(swarm_height/4)
+			self.swarms[3].top+(self.swarm_height/4)
 		)
 
 		left_of_incy_lower = (
 			self.swarms[3].left,
-			self.swarms[3].top+(3*(swarm_height/4))
+			self.swarms[3].top+(3*(self.swarm_height/4))
 		)
 
 		bit_left_of_incy_lower = (
 			self.swarms[3].left-(3/24),
-			self.swarms[3].top+(3*(swarm_height/4))
+			self.swarms[3].top+(3*(self.swarm_height/4))
 		)
 
 		self.arrows = [
@@ -272,12 +246,12 @@ class Application(tk.Frame):
 		root.bind('q', self.quit)
 
 		for skip in range(self.frame_skip):
-			self.update_network(modern=self.modern)
+			self.update_network()
 			self.framecount = self.frame_skip
 
 		self.draw()
 
-	def update_network(self,modern=True):
+	def update_network(self):
 
 		try:
 			iteration_num, iteration = next(self.iteration_generator)
@@ -288,34 +262,12 @@ class Application(tk.Frame):
 
 		#print(iteration_num)
 
-		if modern:
-
-			for display_swarm, (name, hypotheses) in zip(self.swarms,iteration):
-				for agent, (x,y,c) in zip(display_swarm.agents,hypotheses):
-					if x < 0:
-						x = 0
-					if y < 0:
-						y = 0
-					agent.hyp.x = x
-					agent.hyp.y = y
-					agent.active = c
-
-		else:
-
-			for display_swarm, data_swarm in zip(self.swarms,iteration):
-				name = data_swarm['swarm name']
-				hypotheses = data_swarm['hypotheses']
-				num = data_swarm['num']
-				for agent, (activity,hyp) in zip(display_swarm.agents,hypotheses):
-					if hyp:
-						x,y = hyp
-					else:
-						x,y = '-','-'
-
-					agent.hyp.x =x
-					agent.hyp.y =y
-					agent.active = activity
-
+		for display_swarm, (name, hypotheses) in zip(self.swarms,iteration):
+			for agent, (x,y,a,c) in zip(display_swarm.agents,hypotheses):
+				agent.hyp.x = max(x,0)
+				agent.hyp.y = max(y,0)
+				agent.active = a
+				agent.count = c
 
 	def draw(self):
 
@@ -403,55 +355,77 @@ class Application(tk.Frame):
 		except AttributeError:
 			pass
 
+
 		if agent.active:
-			l_fill = colors[agent.hyp.x]
-			r_fill = colors[agent.hyp.y]
-			if agent.active < quorum_threshold:
-				stipple = "gray50"
+
+			if agent.count >= self.quorum_threshold:
+
+				activity_fill = quorate_fill
+
 			else:
-				stipple = None
-			activity_fill = active_fill
+
+				activity_fill = active_fill
 
 		else:
-			l_fill = inactive_fill
-			r_fill = inactive_fill
-			stipple = None
+
 			activity_fill = inactive_fill
 
-		if agent.active == 1:
+		agent.activity_oval = self.canvas.create_oval(
+			agent.left*self.width,
+			agent.top*self.height,
+			agent.right*self.width,
+			agent.bottom*self.height,
+			fill=activity_fill,)
 
-			activity_fill = quorate_fill
+		#if agent.active:
+		#	l_fill = colors[agent.hyp.x]
+		#	r_fill = colors[agent.hyp.y]
+		#	if agent.active < quorum_threshold:
+		#		stipple = "gray50"
+		#	else:
+		#		stipple = None
+		#	activity_fill = active_fill
 
-			agent.activity_oval = self.canvas.create_oval(
-				agent.left*self.width,
-				agent.top*self.height,
-				agent.right*self.width,
-				agent.bottom*self.height,
-				fill=activity_fill,)
+		#else:
+		#	l_fill = inactive_fill
+		#	r_fill = inactive_fill
+		#	stipple = None
+		#	activity_fill = inactive_fill
 
-		else:
+		#if agent.active == 1:
 
-			agent.left_arc = self.canvas.create_arc(
-				agent.left*self.width,
-				agent.top*self.height,
-				agent.right*self.width,
-				agent.bottom*self.height,
-				stipple=stipple,
-				fill=l_fill,
-				start=90,
-				extent=180,
-				outline='')
+		#	activity_fill = quorate_fill
 
-			agent.right_arc = self.canvas.create_arc(
-				agent.left*self.width,
-				agent.top*self.height,
-				agent.right*self.width,
-				agent.bottom*self.height,
-				stipple=stipple,
-				fill=r_fill,
-				start=-90,
-				extent=180,
-				outline='')
+		#	agent.activity_oval = self.canvas.create_oval(
+		#		agent.left*self.width,
+		#		agent.top*self.height,
+		#		agent.right*self.width,
+		#		agent.bottom*self.height,
+		#		fill=activity_fill,)
+
+		#else:
+
+		#	agent.left_arc = self.canvas.create_arc(
+		#		agent.left*self.width,
+		#		agent.top*self.height,
+		#		agent.right*self.width,
+		#		agent.bottom*self.height,
+		#		stipple=stipple,
+		#		fill=l_fill,
+		#		start=90,
+		#		extent=180,
+		#		outline='')
+
+		#	agent.right_arc = self.canvas.create_arc(
+		#		agent.left*self.width,
+		#		agent.top*self.height,
+		#		agent.right*self.width,
+		#		agent.bottom*self.height,
+		#		stipple=stipple,
+		#		fill=r_fill,
+		#		start=-90,
+		#		extent=180,
+		#		outline='')
 
 		try:
 			self.canvas.delete(agent.label)
@@ -459,8 +433,8 @@ class Application(tk.Frame):
 			pass
 
 		agent.label = self.canvas.create_text(
-			(agent.left+(agent_dia/2))*self.width,
-			(agent.top+(agent_dia/2))*self.height,
+			(agent.left+(self.agent_dia/2))*self.width,
+			(agent.top+(self.agent_dia/2))*self.height,
 			#anchor="nw",
 			fill=my_fill,
 			font=agent_label_font,
@@ -469,8 +443,6 @@ class Application(tk.Frame):
 				x=agent.hyp.x,
 				y=agent.hyp.y,)
 		)
-
-
 
 	def draw_swarm_box(self, swarm):
 
@@ -520,13 +492,7 @@ app = Application(
 	master=root,
 	width=1080,
 	height=1080,
-	modern=True,
-	from_file=True,
-	quorum_threshold=2,
-	draw_hypotheses=False,
 	frame_rate=60,
-	frame_skip=0,
-	x=10,
-	y=10,)
+	frame_skip=0,)
 
 root.mainloop()
