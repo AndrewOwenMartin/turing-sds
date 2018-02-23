@@ -670,7 +670,7 @@ Which can be used with a state table.
 
 <<>>=
 state_table = [
-	('A-init','init',['A-init']),
+	('A-init','init',['halt']),
 	('B-xgt0','xgt0',['A-init','D-incy']),
 	('C-decx','decx',['B-xgt0']),
 	('D-incy','incy',['C-decx']),
@@ -821,10 +821,20 @@ def `quorum_test_phase(
 					agent.active = Activity(
 						True,
 						agent.active.count,)
+					#agent.active = Activity(
+					#	True,
+					#	agent.active.count+1,)
 
 				else:
 
 					agent.active = Activity(False, 0)
+					#next_count = agent.active.count - 1
+					#agent.active = Activity(next_count > 0, next_count)
+
+			#else:
+
+			#	next_count = agent.active.count - 1
+			#	agent.active = Activity(next_count > 0, next_count)
 
 		else:
 
@@ -832,10 +842,18 @@ def `quorum_test_phase(
 
 		if rng.random() < error_prob:
 
-			agent.active = Activity(not agent.active.active, agent.active.count)
+			new_active = not agent.active.active
 
-				
-	
+			if new_active:
+
+				agent.active = Activity(True, agent.active.count)
+
+			else:
+
+				agent.active = Activity(False, agent.active.count)
+
+
+
 	#for agent_num, agent in enumerate(swarm):
 
 	#	if agent.active.count == quorum_threshold:
@@ -858,7 +876,7 @@ def `quorum_test_phase(
 	#		else:
 
 	#			# Inactivity due to test failing with a
-	#			# polled quorate agent 
+	#			# polled quorate agent
 
 	#			agent.active = Activity(False, 0)
 
@@ -871,6 +889,84 @@ def `quorum_test_phase(
 	#	if rng.random() < error_prob:
 
 	#		agent.active = Activity(True, agent.active.count)
+@
+
+\subsection{Quorum diffusion function}
+<<multi-swarm-solution.py>>=
+def quorum_diffusion_phase(
+	swarm,
+	allow_self_selection,
+	quorum_threshold,
+	hyp_function,
+	error_prob,
+	rng,
+):
+	# Quorum diffusion phase
+	for agent_num, agent in enumerate(swarm):
+
+		local_polled = random.choice(swarm)
+
+		while (not allow_self_selection) and local_polled is agent:
+
+			local_polled = random.choice(swarm)
+
+		if not agent.active.active:
+			# Agent is inactive
+
+			if local_polled.active.active:
+
+				# Local polled is active, copy hypothesis.
+				agent.hypothesis = local_polled.hypothesis
+
+				# If local polled is also quorate then go active as well.
+				if local_polled.active.count >= quorum_threshold:
+
+					agent.active  = Activity(True,agent.active.count)
+
+			else:
+
+				# Local polled is inactive, random hyp from linked swarm.
+				agent.hypothesis = hyp_function(random)
+
+		elif agent.active.active and agent.active.count < quorum_threshold:
+			#Agent is active, but not quorate
+
+			if local_polled.active.active:
+				#Polled is active or quorate
+
+				if (local_polled.hypothesis == agent.hypothesis):
+					# If registers match then be active and increment count
+
+					agent.active = Activity(True,min(agent.active.count+10,quorum_threshold))
+
+				else:
+
+					# If registers don't match go inactive
+					agent.active = Activity(False,0)
+
+					# Maybe I should suppress activity here if
+					# count reaches 0
+					#new_count = agent.active.count-1
+					#new_activity = new_count > 0
+					#agent.active = Activity(new_activity,max(new_count,0))
+
+					# stay active if count reaches zero
+					# agent.active = Activity(True,max(agent.active.count-1,0))
+
+			else:
+
+				# Agent is active, but local polled is inactive, decrement count,
+				# go inactive if count is 0
+
+				# Maybe I should suppress activity here if
+				# count reaches 0
+				new_count = agent.active.count-1
+				new_activity = new_count > 0
+				agent.active = Activity(new_activity,max(new_count,0))
+
+		if rng.random() < error_prob:
+
+			agent.active = Activity(agent.active.active,agent.active.count + random.choice([-1,1]))
 @
 
 \subsection{Quorum microtest}
@@ -1017,43 +1113,19 @@ def `quorum_build_solution(
 \subsection{Quorum iterate}
 At this point, `microtest' is a function which takes two agents (the `current' agent, and a randomly polled agent) and returns whether their registers are valid (e.g. their x registers are the same and the y register is of `current' is one larger than the y register of `polled') and that the `current' agent has the correct value in its x register, which is either \(x = 0\), \(x > 0\) or `dont care'.
 <<>>=
-def `quorum_iterate(solution, quorum_threshold, error_prob, allow_self_selection):
+def `quorum_iterate(solution, quorum_threshold, error_prob, allow_self_selection, rng=random):
 
 	for swarm_name, swarm, microtest, hyp_function, previous_swarms in solution:
 
-		# Quorum diffusion phase
-		for agent_num, agent in enumerate(swarm):
+		quorum_diffusion_phase(
+			swarm,
+			allow_self_selection,
+			quorum_threshold,
+			hyp_function,
+			error_prob,
+			rng,
+		)
 
-			local_polled = random.choice(swarm)
-
-			while (not allow_self_selection) and local_polled is agent:
-
-				local_polled = random.choice(swarm)
-
-			# Agent is not quorate, but active or inactive
-			if not agent.active.active:
-
-				if local_polled.active.active:
-
-					agent.hypothesis = local_polled.hypothesis
-
-				else:
-
-					agent.hypothesis = hyp_function(random)
-
-			elif agent.active.active and agent.active.count < quorum_threshold:
-
-				if local_polled.active.active:
-				
-					if (local_polled.hypothesis == agent.hypothesis):
-
-						agent.active = Activity(True,min(agent.active.count+1,quorum_threshold))
-
-					else:
-
-						# Maybe I should suppress activity here if
-						# count reaches 0
-						agent.active = Activity(True,max(agent.active.count-1,0))
 
 		#for agent_num, agent in enumerate(swarm):
 
@@ -1101,13 +1173,13 @@ def `quorum_iterate(solution, quorum_threshold, error_prob, allow_self_selection
 			quorum_threshold,
 			microtest,
 			error_prob,
-			random,)
+			rng,)
 
 	# Halting condition
 	halt_swarm = next(swarm for name,swarm,_,_,_ in solution if name == 'halt')
 
-	# Halt if there are any quorate agents in the halt swarm
-	return any(
+	# Halt if all agents in the halt swarm are quorate
+	return all(
 		(x.active.active and x.active.count >= quorum_threshold)
 		for x
 		in halt_swarm
@@ -1174,12 +1246,10 @@ def `do_quorum_sensing_solution(
 
 	for num, repeat in enumerate(repeat_generator,start=1):
 
-		#print(num)
-
 		iteration_states.append(solution_to_json(solution))
 
 		if quorum_iterate(
-			solution[1:],
+			solution,
 			quorum_threshold,
 			error_prob,
 			allow_self_selection,
@@ -1207,7 +1277,7 @@ def `do_quorum_sensing_solution(
 			break
 
 	else:
-		
+
 		print("Maximum iterations reached ({i}). No answer.".format(
 			i=num
 		))
@@ -1230,18 +1300,18 @@ This is out of date, use a third file to make the anim then call animate.\
 if __name__ == "__main__":
 	animations = []
 
-	animation_count = 1	
-	initial_x = 50
+	animation_count = 10
+	initial_x = 1000
 	initial_y = 0
 	agent_count = 10
-	quorum_threshold = 50
-	error_prob=0.001
-	allow_self_selection = True
-	max_iterations = 10000
+	quorum_threshold = 100
+	error_prob=0.01
+	allow_self_selection = False
+	max_iterations = 1000000
 
 
 	for animation_num in range(animation_count):
-	
+
 		animation = do_quorum_sensing_solution(
 			initial_x=initial_x,
 			initial_y=initial_y,
@@ -1250,7 +1320,7 @@ if __name__ == "__main__":
 			error_prob=error_prob,
 			allow_self_selection=allow_self_selection,
 			max_iterations=max_iterations,)
-			
+
 		metadata = {
 			'num':animation_num,
 			'x':initial_x,
@@ -1261,8 +1331,10 @@ if __name__ == "__main__":
 			'allow self selection':allow_self_selection,
 			'max iterations':max_iterations,
 		}
-		
+
 		animations.append((metadata,animation))
+
+		print('done animation {n}'.format(n=animation_num))
 
 	with open('multi-swarm-animation.json','w') as f:
 		for animation in animations:

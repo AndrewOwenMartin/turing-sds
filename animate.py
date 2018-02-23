@@ -439,9 +439,10 @@ class Application(tk.Frame):
 			fill=my_fill,
 			font=agent_label_font,
 			justify="center",
-			text="({x},{y})".format(
+			text="({x},{y})\n{c}".format(
 				x=agent.hyp.x,
-				y=agent.hyp.y,)
+				y=agent.hyp.y,
+				c=agent.count)
 		)
 
 	def draw_swarm_box(self, swarm):
