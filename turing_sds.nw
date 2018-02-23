@@ -813,6 +813,24 @@ def `quorum_test_phase(
 			else:
 
 				agent.active = 0
+
+		else:
+
+			agent.active = 0
+
+		if rng.random() < 0.001:
+
+			agent.active += 1
+
+			if agent.active == 2:
+
+				print("went quorate",swarm)
+
+			elif agent.active == 1:
+
+				print("went active",swarm)
+
+			agent.active = min(agent.active,2)
 @
 
 \subsection{Quorum microtest}
@@ -831,6 +849,7 @@ else:
 
 This function can do with a big cleanup, it probably should just be doing registers checking.
 It looks a bit complicated, but it saves me writing a `registers are ok' function for each swarm.
+
 \clearpage{}
 <<multi-swarm-solution.py>>=
 def `quorum_make_test_fun(
@@ -961,13 +980,13 @@ def `quorum_build_solution(
 @
 
 \subsection{Quorum iterate}
-At this point, `microtest' is a function which takes an agent and returns whether a random linked agent is blahhh.
+At this point, `microtest' is a function which takes two agents (the `current' agent, and a randomly polled agent) and returns whether their registers are valid (e.g. their x registers are the same and the y register is of `current' is one larger than the y register of `polled') and that the `current' agent has the correct value in its x register, which is either \(x = 0\), \(x > 0\) or `dont care'.
 <<>>=
 def `quorum_iterate(solution, quorum_threshold):
 
 	for swarm_name, swarm, microtest, hyp_function, previous_swarms in solution:
 
-		# Quorum diffusion
+		# Quorum diffusion phase
 		for agent_num, agent in enumerate(swarm):
 
 			if agent.active == 0:
@@ -984,9 +1003,13 @@ def `quorum_iterate(solution, quorum_threshold):
 
 			elif agent.active == 1:
 
-				local_polled = random.choice(swarm)
+				local_polled = agent
 
-				if local_polled.active >= 1:
+				while local_polled is agent:
+
+					local_polled = random.choice(swarm)
+
+				if local_polled.active >= 1 and agent.hypothesis == local_polled.hypothesis:
 
 					#print('agent',agent_num,'goes quorate',)
 
@@ -1000,7 +1023,7 @@ def `quorum_iterate(solution, quorum_threshold):
 
 				linked_polled.active = 0
 
-		#test
+		#Quorum test phase
 		quorum_test_phase(
 			swarm,
 			previous_swarms,
@@ -1099,7 +1122,7 @@ if __name__ == "__main__":
 	animations = []
 	for animation_count in range(1):
 		animation = do_quorum_sensing_solution(
-			initial_x=20,
+			initial_x=100,
 			initial_y=0,
 			quorum_threshold=2,
 			max_iterations=None,)

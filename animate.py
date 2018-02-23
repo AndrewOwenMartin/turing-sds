@@ -68,6 +68,7 @@ quorate_fill="yellow"
 swarm_fill="light gray"
 background_fill="gray"
 linewidth=5
+
 def randcolor():
 	return '#' + "".join(
 		random.choice('0123456789abcdef')
@@ -88,7 +89,7 @@ colors = [randcolor() for x in range(2000)]
 
 class Application(tk.Frame):
 
-	def __init__(self, master, width, height, modern, from_file,quorum_threshold, draw_hypotheses, x, y):
+	def __init__(self, master, width, height, modern, from_file,quorum_threshold, draw_hypotheses, frame_rate, frame_skip, x, y):
 
 		tk.Frame.__init__(self, master)
 
@@ -107,6 +108,10 @@ class Application(tk.Frame):
 		self.quorum_threshold = quorum_threshold
 
 		self.draw_hypotheses = draw_hypotheses
+
+		self.frame_rate = frame_rate
+
+		self.frame_skip = frame_skip
 
 		self.x = x
 
@@ -266,6 +271,10 @@ class Application(tk.Frame):
 
 		root.bind('q', self.quit)
 
+		for skip in range(self.frame_skip):
+			self.update_network(modern=self.modern)
+			self.framecount = self.frame_skip
+
 		self.draw()
 
 	def update_network(self,modern=True):
@@ -277,7 +286,7 @@ class Application(tk.Frame):
 			print('No more iterations. Halting')
 			return
 
-		print(iteration_num)
+		#print(iteration_num)
 
 		if modern:
 
@@ -319,9 +328,7 @@ class Application(tk.Frame):
 
 		self.draw_network(self.framecount, self.quorum_threshold)
 
-		self.frames_per_second = 60
-
-		delay = int(1000/self.frames_per_second)
+		delay = int(1000/self.frame_rate)
 
 		if not self.halt:
 
@@ -514,9 +521,11 @@ app = Application(
 	width=1080,
 	height=1080,
 	modern=True,
-	from_file=False,
+	from_file=True,
 	quorum_threshold=2,
 	draw_hypotheses=False,
+	frame_rate=60,
+	frame_skip=0,
 	x=10,
 	y=10,)
 

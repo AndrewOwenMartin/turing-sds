@@ -11,3 +11,6 @@ __pycache__
 two_agent_solution.py
 run_two_agent_solution.py
 multi_swarm_solution.py
+turing_sds_original.py
+multi-swarm-animation.json
+frames/*.ps
