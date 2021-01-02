@@ -4,4 +4,4 @@ See [turing_sds.pdf](turing_sds.pdf) for documentation. See also [turing_sds_ori
 
 # Running
 
-Run the code for the Multi-swarm solution with [[make code && python multi_swarm_solution.py]] and for the Two Agent solution with [[make code && python run_two_agent_solution.py]].
+Run the code for the Multi-swarm solution with `make code && python multi_swarm_solution.py` and for the Two Agent solution with `make code && python run_two_agent_solution.py`.
