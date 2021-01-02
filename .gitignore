@@ -3,7 +3,6 @@
 *.fls
 *.log
 *.out
-*.pdf
 !animate.py
 *.tex
 *.toc
@@ -14,3 +13,10 @@ multi_swarm_solution.py
 turing_sds_original.py
 multi-swarm-animation.json
 frames/*.ps
+doc/graves2014neural.pdf
+logtime-eps-converted-to.pdf
+no-counter-pseudocode.pdf
+notes.pdf
+diagrams.pdf
+out.pdf
+turing_sds_original.pdf
